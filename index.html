@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>KPRIT Resource Hub | Academic Portal & Updates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Mozilla PDF.js for Mobile & Desktop Canvas Rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-secondary: #111827;
+      --bg-card: #161f33;
+      --bg-card-hover: #1d2842;
+      --border: #26334d;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-soft: rgba(59, 130, 246, 0.14);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Privacy Curtain for Blur / Snipping Protection */
+    #privacy-curtain {
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.97);
+      backdrop-filter: blur(22px);
+      z-index: 99999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    #privacy-curtain.active {
+      display: flex;
+    }
+
+    /* Navbar */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(9, 13, 22, 0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .brand-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .brand-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: block;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      min-height: 40px;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-google {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: #e2e8f0;
+    }
+    .btn-google:hover {
+      background: #f1f5f9;
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.14);
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--text-primary);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    /* Main Layout */
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+      flex: 1;
+    }
+
+    /* Hero Banner */
+    .hero {
+      background: linear-gradient(135deg, #131c31 0%, #0f172a 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .hero p {
+      color: var(--text-secondary);
+      font-size: 13.5px;
+      max-width: 640px;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      background: rgba(9, 13, 22, 0.6);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 10px;
+      min-width: 96px;
+    }
+
+    .stat-box strong {
+      display: block;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    .stat-box span {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Navigation Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-btn {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-soft);
+      color: #93c5fd;
+      border-color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* Filter Bar */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .search-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    select, input, textarea {
+      width: 100%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      min-height: 42px;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Resource Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .card:hover {
+      border-color: #3b82f688;
+      transform: translateY(-2px);
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: #93c5fd;
+    }
+
+    .badge.urgent {
+      background: rgba(239, 68, 68, 0.16);
+      color: #fca5a5;
+    }
+
+    .badge.exam {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+    }
+
+    .badge.general {
+      background: rgba(16, 185, 129, 0.16);
+      color: #6ee7b7;
+    }
+
+    .card h3 {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 6px;
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    /* Updates List */
+    .updates-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .update-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .update-card.High {
+      border-left-color: var(--danger);
+    }
+
+    /* Admin Grid */
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .admin-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .admin-box h3 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .form-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 580px;
+    }
+
+    th, td {
+      padding: 11px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    /* Modal & Protected PDF Reader */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      padding: 22px;
+      position: relative;
+    }
+
+    .reader-box {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 980px;
+      height: 92vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .reader-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      z-index: 10;
+    }
+
+    .reader-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .reader-body {
+      flex: 1;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 10px 48px;
+      background: #060911;
+    }
+
+    #pdf-canvas-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+    }
+
+    #pdf-canvas-container canvas {
+      max-width: 100%;
+      height: auto !important;
+      border-radius: 6px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+      background: #fff;
+    }
+
+    .text-doc-view {
+      max-width: 740px;
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+      white-space: pre-wrap;
+      font-size: 14.5px;
+      line-height: 1.7;
+      color: var(--text-primary);
+    }
+
+    /* Dynamic Watermark Layer */
+    .watermark-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 20;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px;
+      padding: 24px;
+      opacity: 0.16;
+    }
+
+    .watermark-item {
+      transform: rotate(-24deg);
+      font-size: 13px;
+      font-weight: 700;
+      color: #93c5fd;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      color: var(--text-primary);
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 18px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    footer a {
+      color: #93c5fd;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    /* Mobile Responsive Breakpoints */
+    @media (max-width: 768px) {
+      .filter-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+      .form-row-2 {
+        grid-template-columns: 1fr;
+      }
+      .hero h2 {
+        font-size: 18px;
+      }
+      .reader-box {
+        height: 96vh;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .filter-grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .nav-actions {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body oncontextmenu="return false;">
+
+  <!-- Privacy Curtain -->
+  <div id="privacy-curtain">
+    <h2 style="font-size: 22px; margin-bottom: 8px;">Protected Academic Content</h2>
+    <p style="color: #94a3b8; max-width: 420px; font-size: 14px;">
+      Screen capture, tab switching, or developer inspection detected. Return focus to this window to continue reading.
+    </p>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <div class="brand-badge">KP</div>
+        <div class="brand-text">
+          <h1>KPRIT Resource Hub</h1>
+          <span>Kommuri Pratap Reddy Institute of Technology</span>
+        </div>
+      </a>
+
+      <div class="nav-actions">
+        <div id="auth-guest" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-google" onclick="signInWithGoogle()">
+            <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Student Google Sign-In
+          </button>
+          <button class="btn btn-secondary" onclick="openAdminLogin()">Admin</button>
+        </div>
+
+        <div id="auth-user" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div class="user-pill">
+            <span class="status-dot"></span>
+            <span id="user-display-name">Student</span>
+          </div>
+          <button class="btn btn-secondary" onclick="signOutUser()">Sign Out</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <section class="hero">
+      <div>
+        <h2>Centralized B.Tech Study Notes, PYQs & Exam Alerts</h2>
+        <p>
+          Instant cloud-synced access to subject-wise PDFs, previous year question papers, lab manuals, and official KPRIT academic circulars.
+        </p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-box">
+          <strong id="stat-resources">0</strong>
+          <span>Study PDFs</span>
+        </div>
+        <div class="stat-box">
+          <strong id="stat-updates">0</strong>
+          <span>Active Notices</span>
+        </div>
+        <div class="stat-box">
+          <strong id="stat-students">0</strong>
+          <span>Active Readers</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="resources" onclick="switchTab('resources', this)">📚 Study Repository</button>
+      <button class="tab-btn" data-tab="updates" onclick="switchTab('updates', this)">📢 Important Updates & Exams</button>
+      <button class="tab-btn" id="admin-tab-btn" data-tab="admin" style="display: none;" onclick="switchTab('admin', this)">🛡️ Admin Command Center</button>
+    </div>
+
+    <!-- TAB 1: Study Resources -->
+    <section id="tab-resources" class="tab-panel active">
+      <div class="filter-grid">
+        <select id="filter-year" onchange="renderResources()">
+          <option value="ALL">All Years</option>
+          <option value="1st Year" selected>1st Year (B.Tech)</option>
+          <option value="2nd Year">2nd Year</option>
+          <option value="3rd Year">3rd Year</option>
+          <option value="4th Year">4th Year</option>
+        </select>
+
+        <select id="filter-dept" onchange="renderResources()">
+          <option value="ALL">All Branches</option>
+          <option value="CSE" selected>CSE</option>
+          <option value="CSM">CSM (AI & ML)</option>
+          <option value="CSD">CSD (Data Science)</option>
+          <option value="ECE">ECE</option>
+          <option value="EEE">EEE</option>
+          <option value="CIVIL">Civil</option>
+          <option value="MECH">Mechanical</option>
+        </select>
+
+        <select id="filter-sem" onchange="renderResources()">
+          <option value="ALL">All Semesters</option>
+          <option value="Sem 1" selected>Semester 1</option>
+          <option value="Sem 2">Semester 2</option>
+          <option value="Sem 3">Semester 3</option>
+          <option value="Sem 4">Semester 4</option>
+          <option value="Sem 5">Semester 5</option>
+          <option value="Sem 6">Semester 6</option>
+          <option value="Sem 7">Semester 7</option>
+          <option value="Sem 8">Semester 8</option>
+        </select>
+
+        <select id="filter-type" onchange="renderResources()">
+          <option value="ALL">All Material Types</option>
+          <option value="Lecture Notes">Lecture Notes</option>
+          <option value="PYQ">Previous Year Questions (PYQ)</option>
+          <option value="Lab Manual">Lab Manual</option>
+          <option value="Syllabus">Syllabus & Blueprint</option>
+        </select>
+      </div>
+
+      <div class="search-row">
+        <input type="text" id="search-input" placeholder="Search by subject (e.g., Engineering Chemistry, C Programming, Matrices)..." oninput="renderResources()" />
+        <button class="btn btn-secondary" onclick="resetFilters()">Reset Filters</button>
+      </div>
+
+      <div id="resources-grid" class="cards-grid">
+        <p style="color: var(--text-secondary);">Syncing cloud repository...</p>
+      </div>
+    </section>
+
+    <!-- TAB 2: Important Updates -->
+    <section id="tab-updates" class="tab-panel">
+      <div id="updates-list" class="updates-list">
+        <p style="color: var(--text-secondary);">Loading latest KPRIT notices...</p>
+      </div>
+    </section>
+
+    <!-- TAB 3: Admin Command Center -->
+    <section id="tab-admin" class="tab-panel">
+      <div class="admin-grid">
+        <!-- Upload Study Material -->
+        <div class="admin-box">
+          <h3>📤 Upload Study Material (Cloud PDF)</h3>
+          <form onsubmit="handleResourceUpload(event)">
+            <div class="form-group">
+              <label>Document Title</label>
+              <input type="text" id="res-title" placeholder="e.g., Unit 1-3 Engineering Chemistry Complete Notes" required />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Year</label>
+                <select id="res-year">
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Branch</label>
+                <select id="res-dept">
+                  <option value="CSE">CSE</option>
+                  <option value="CSM">CSM</option>
+                  <option value="CSD">CSD</option>
+                  <option value="ECE">ECE</option>
+                  <option value="EEE">EEE</option>
+                  <option value="CIVIL">Civil</option>
+                  <option value="MECH">Mechanical</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Semester</label>
+                <select id="res-sem">
+                  <option value="Sem 1">Sem 1</option>
+                  <option value="Sem 2">Sem 2</option>
+                  <option value="Sem 3">Sem 3</option>
+                  <option value="Sem 4">Sem 4</option>
+                  <option value="Sem 5">Sem 5</option>
+                  <option value="Sem 6">Sem 6</option>
+                  <option value="Sem 7">Sem 7</option>
+                  <option value="Sem 8">Sem 8</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Material Type</label>
+                <select id="res-type">
+                  <option value="Lecture Notes">Lecture Notes</option>
+                  <option value="PYQ">PYQ</option>
+                  <option value="Lab Manual">Lab Manual</option>
+                  <option value="Syllabus">Syllabus</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Subject Name</label>
+              <input type="text" id="res-subject" placeholder="e.g., Programming for Problem Solving (C)" required />
+            </div>
+
+            <div class="form-group">
+              <label>Select PDF File (Recommended for Mobile & Desktop)</label>
+              <input type="file" id="res-file" accept="application/pdf" />
+            </div>
+
+            <div class="form-group">
+              <label>Or Paste Quick Text Summary / Important Questions (Optional)</label>
+              <textarea id="res-text" rows="3" placeholder="Optional fallback notes if no PDF file is attached..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="upload-btn" style="width: 100%;">Publish to Cloud Hub</button>
+          </form>
+        </div>
+
+        <!-- Post Exam / Notice Update -->
+        <div class="admin-box">
+          <h3>📢 Post Important Update / Exam Schedule</h3>
+          <form onsubmit="handleUpdatePost(event)">
+            <div class="form-group">
+              <label>Notice Headline</label>
+              <input type="text" id="upd-title" placeholder="e.g., B.Tech I-I Mid-1 Examination Timetable Released" required />
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Category</label>
+                <select id="upd-category">
+                  <option value="Exam Schedule">Exam Schedule</option>
+                  <option value="Academic Circular">Academic Circular</option>
+                  <option value="Lab / Viva">Lab / Viva</option>
+                  <option value="Hackathon / Event">Hackathon / Event</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Priority</label>
+                <select id="upd-priority">
+                  <option value="High">High (Urgent Red)</option>
+                  <option value="Normal">Normal</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-group">
+                <label>Target Audience</label>
+                <input type="text" id="upd-target" value="1st Year CSE / All Branches" required />
+              </div>
+              <div class="form-group">
+                <label>Effective / Exam Date</label>
+                <input type="text" id="upd-date" placeholder="e.g., 24 Nov 2026" required />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Detailed Announcement</label>
+              <textarea id="upd-body" rows="5" placeholder="Enter full timetable instructions, room numbers, or circular details..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Broadcast Notice Live</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Manage Existing Content & Student Logs -->
+      <div class="admin-box" style="margin-bottom: 16px;">
+        <h3>🗂️ Manage Published Study Materials</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Subject</th>
+                <th>Target</th>
+                <th>Views</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-resources-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-box">
+        <h3>👥 Live Student Activity Logs</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Docs Read</th>
+                <th>Last Opened</th>
+                <th>Last Active</th>
+              </tr>
+            </thead>
+            <tbody id="admin-students-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Admin Login Modal -->
+  <div id="admin-modal" class="modal-backdrop">
+    <div class="modal-box">
+      <h3 style="margin-bottom: 6px;">Admin Command Access</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+        Enter the KPRIT Hub administrator passcode to upload PDFs and broadcast exam notices.
+      </p>
+      <div class="form-group">
+        <input type="password" id="admin-pass-input" placeholder="Enter Admin Passcode" onkeydown="if(event.key==='Enter') verifyAdminPass()" />
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeAdminLogin()">Cancel</button>
+        <button class="btn btn-primary" onclick="verifyAdminPass()">Unlock Admin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Protected Mobile-Friendly PDF / Document Reader Modal -->
+  <div id="reader-modal" class="modal-backdrop">
+    <div class="reader-box">
+      <div class="reader-header">
+        <div>
+          <strong id="reader-title" style="font-size: 14px; display: block;">Document Viewer</strong>
+          <span id="reader-subtitle" style="font-size: 11px; color: var(--text-secondary);">Protected Read-Only Mode</span>
+        </div>
+        <div class="reader-controls">
+          <button class="btn btn-secondary" id="zoom-out-btn" onclick="changeZoom(-0.2)">−</button>
+          <span id="zoom-label" style="font-size: 12px; min-width: 44px; text-align: center;">100%</span>
+          <button class="btn btn-secondary" id="zoom-in-btn" onclick="changeZoom(0.2)">+</button>
+          <button class="btn btn-danger" onclick="closeReader()">Close ✕</button>
+        </div>
+      </div>
+
+      <div class="reader-body" id="reader-scroll-area">
+        <div class="watermark-overlay" id="watermark-layer"></div>
+        <div id="pdf-loading" style="color: #93c5fd; font-size: 14px; margin: 24px 0; display: none;">
+          Rendering high-clarity pages for your device...
+        </div>
+        <div id="pdf-canvas-container"></div>
+        <div id="text-doc-container" class="text-doc-view" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy Policy Modal -->
+  <div id="privacy-modal" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 520px;">
+      <h3 style="margin-bottom: 8px;">Privacy Policy — KPRIT Resource Hub</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        KPRIT Resource Hub uses Google Sign-In solely to verify student identity, personalize your dynamic reading watermark, and track academic resource usage across KPRIT departments. We never sell or share student email addresses with third parties.
+      </p>
+      <button class="btn btn-primary" onclick="document.getElementById('privacy-modal').classList.remove('open')">Got It</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <footer>
+    KPRIT Resource Hub • Built for Kommuri Pratap Reddy Institute of Technology Students •
+    <a onclick="document.getElementById('privacy-modal').classList.add('open')">Privacy Policy</a>
+  </footer>
+
+  <script>
+    // 1. SUPABASE CONFIGURATION (Live Project Keys)
+    const SUPABASE_URL = 'https://zzklpylokfhtlxhrnqqx.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_7Ik44J6c92t43JgBmLdKLQ_UQEWIpy2';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Configure PDF.js Worker
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    // Default Admin SHA-256 Passcode Hash (Default Passcode: KPRIT2026)
+    const ADMIN_HASH = '8c5e3a461899834d2a13c572b8505f0a4d2c79d2d945f2c27a37e58c9493f4c8';
+    const FALLBACK_PLAIN_PASS = 'KPRIT2026';
+
+    let currentUser = null;
+    let isAdmin = sessionStorage.getItem('kprit_admin') === 'true';
+    let allResources = [];
+    let allUpdates = [];
+    let allStudents = [];
+    let activePdfDoc = null;
+    let currentScale = window.innerWidth < 640 ? 1.1 : 1.35;
+
+    // Toast Helper
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3400);
+    }
+
+    // 2. AUTHENTICATION (Real Google OAuth + Session Listener)
+    async function signInWithGoogle() {
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) {
+        showToast('Google Sign-In Error: ' + error.message);
+      }
+    }
+
+    async function signOutUser() {
+      await sb.auth.signOut();
+      currentUser = null;
+      isAdmin = false;
+      sessionStorage.removeItem('kprit_admin');
+      updateAuthUI();
+      showToast('Signed out successfully');
+    }
+
+    function updateAuthUI() {
+      const guestBox = document.getElementById('auth-guest');
+      const userBox = document.getElementById('auth-user');
+      const adminBtn = document.getElementById('admin-tab-btn');
+
+      if (currentUser || isAdmin) {
+        guestBox.style.display = 'none';
+        userBox.style.display = 'flex';
+        const label = isAdmin
+          ? (currentUser ? `${currentUser.name} (Admin)` : 'KPRIT Admin')
+          : currentUser.name;
+        document.getElementById('user-display-name').textContent = label;
+      } else {
+        guestBox.style.display = 'flex';
+        userBox.style.display = 'none';
+      }
+
+      adminBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    }
+
+    sb.auth.onAuthStateChange(async (event, session) => {
+      if (session && session.user) {
+        const meta = session.user.user_metadata || {};
+        currentUser = {
+          email: session.user.email,
+          name: meta.full_name || meta.name || session.user.email.split('@')[0]
+        };
+        updateAuthUI();
+        await logStudentVisit();
+      } else {
+        currentUser = null;
+        updateAuthUI();
+      }
+    });
+
+    async function logStudentVisit(docTitle = null) {
+      if (!currentUser) return;
+      try {
+        const existing = allStudents.find(s => s.email === currentUser.email);
+        const nextCount = docTitle ? ((existing?.docs_read || 0) + 1) : (existing?.docs_read || 0);
+        await sb.from('student_logs').upsert({
+          email: currentUser.email,
+          full_name: currentUser.name,
+          last_active: new Date().toISOString(),
+          docs_read: nextCount,
+          last_doc: docTitle || existing?.last_doc || 'Browsing Portal'
+        }, { onConflict: 'email' });
+        fetchAllData();
+      } catch (e) {
+        console.warn('Log sync skipped:', e);
+      }
+    }
+
+    // 3. ADMIN VERIFICATION
+    function openAdminLogin() {
+      document.getElementById('admin-modal').classList.add('open');
+      setTimeout(() => document.getElementById('admin-pass-input').focus(), 100);
+    }
+
+    function closeAdminLogin() {
+      document.getElementById('admin-modal').classList.remove('open');
+      document.getElementById('admin-pass-input').value = '';
+    }
+
+    async function sha256(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function verifyAdminPass() {
+      const val = document.getElementById('admin-pass-input').value.trim();
+      const hashed = await sha256(val);
+      if (val === FALLBACK_PLAIN_PASS || hashed === ADMIN_HASH) {
+        isAdmin = true;
+        sessionStorage.setItem('kprit_admin', 'true');
+        closeAdminLogin();
+        updateAuthUI();
+        switchTab('admin', document.getElementById('admin-tab-btn'));
+        showToast('Admin Command Center Unlocked');
+      } else {
+        showToast('Invalid Admin Passcode');
+      }
+    }
+
+    // 4. CLOUD DATA SYNC (Resources, Updates, Student Logs)
+    async function fetchAllData() {
+      const [resQ, updQ, stuQ] = await Promise.all([
+        sb.from('resources').select('*').order('created_at', { ascending: false }),
+        sb.from('updates').select('*').order('created_at', { ascending: false }),
+        sb.from('student_logs').select('*').order('last_active', { ascending: false })
+      ]);
+
+      if (resQ.data) allResources = resQ.data;
+      if (updQ.data) allUpdates = updQ.data;
+      if (stuQ.data) allStudents = stuQ.data;
+
+      document.getElementById('stat-resources').textContent = allResources.length;
+      document.getElementById('stat-updates').textContent = allUpdates.length;
+      document.getElementById('stat-students').textContent = allStudents.length;
+
+      renderResources();
+      renderUpdates();
+      renderAdminTables();
+    }
+
+    function switchTab(tabName, btnEl) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      if (btnEl) btnEl.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-year').value = 'ALL';
+      document.getElementById('filter-dept').value = 'ALL';
+      document.getElementById('filter-sem').value = 'ALL';
+      document.getElementById('filter-type').value = 'ALL';
+      document.getElementById('search-input').value = '';
+      renderResources();
+    }
+
+    function renderResources() {
+      const y = document.getElementById('filter-year').value;
+      const d = document.getElementById('filter-dept').value;
+      const s = document.getElementById('filter-sem').value;
+      const t = document.getElementById('filter-type').value;
+      const q = document.getElementById('search-input').value.trim().toLowerCase();
+
+      const filtered = allResources.filter(item => {
+        if (y !== 'ALL' && item.year !== y) return false;
+        if (d !== 'ALL' && item.dept !== d) return false;
+        if (s !== 'ALL' && item.sem !== s) return false;
+        if (t !== 'ALL' && item.type !== t) return false;
+        if (q && !(`${item.title} ${item.subject} ${item.dept}`.toLowerCase().includes(q))) return false;
+        return true;
+      });
+
+      const grid = document.getElementById('resources-grid');
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 32px;">
+            <h3>No materials match these filters yet</h3>
+            <p>Try clicking "Reset Filters" or check back soon as new notes are uploaded.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => `
+        <div class="card">
+          <div>
+            <div class="badge-row">
+              <span class="badge">${escapeHtml(item.year)}</span>
+              <span class="badge">${escapeHtml(item.dept)}</span>
+              <span class="badge">${escapeHtml(item.sem)}</span>
+              <span class="badge general">${escapeHtml(item.type)}</span>
+            </div>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p style="margin-top: 4px;">Subject: <strong>${escapeHtml(item.subject)}</strong></p>
+          </div>
+          <div>
+            <div class="card-meta" style="margin-bottom: 10px;">
+              <span>👁️ ${item.views || 0} views</span>
+              <span>${new Date(item.created_at).toLocaleDateString('en-IN')}</span>
+            </div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="openProtectedReader('${item.id}')">
+              📖 Read Protected Document
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderUpdates() {
+      const list = document.getElementById('updates-list');
+      if (allUpdates.length === 0) {
+        list.innerHTML = `<div class="card"><p>No active exam notices or circulars posted yet.</p></div>`;
+        return;
+      }
+
+      list.innerHTML = allUpdates.map(u => `
+        <div class="update-card ${u.priority === 'High' ? 'High' : ''}">
+          <div class="badge-row" style="margin-bottom: 6px;">
+            <span class="badge ${u.priority === 'High' ? 'urgent' : 'exam'}">${escapeHtml(u.category)}</span>
+            <span class="badge">${escapeHtml(u.target)}</span>
+            <span class="badge general">Date: ${escapeHtml(u.exam_date)}</span>
+          </div>
+          <h3 style="font-size: 16px; margin-bottom: 6px;">${escapeHtml(u.title)}</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); white-space: pre-wrap;">${escapeHtml(u.body)}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderAdminTables() {
+      const rTable = document.getElementById('admin-resources-table');
+      rTable.innerHTML = allResources.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.title)}</strong></td>
+          <td>${escapeHtml(r.subject)}</td>
+          <td>${escapeHtml(r.year)} • ${escapeHtml(r.dept)} (${escapeHtml(r.sem)})</td>
+          <td>${r.views || 0}</td>
+          <td><button class="btn btn-danger" style="padding: 5px 10px; min-height: 30px;" onclick="deleteResource('${r.id}')">Delete</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="5">No materials uploaded yet.</td></tr>';
+
+      const sTable = document.getElementById('admin-students-table');
+      sTable.innerHTML = allStudents.map(s => `
+        <tr>
+          <td><strong>${escapeHtml(s.full_name)}</strong></td>
+          <td>${escapeHtml(s.email)}</td>
+          <td>${s.docs_read || 0}</td>
+          <td>${escapeHtml(s.last_doc || '-')}</td>
+          <td>${new Date(s.last_active).toLocaleString('en-IN')}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="5">No student activity recorded yet.</td></tr>';
+    }
+
+    // 5. ADMIN UPLOAD & BROADCAST
+    async function handleResourceUpload(e) {
+      e.preventDefault();
+      const btn = document.getElementById('upload-btn');
+      btn.disabled = true;
+      btn.textContent = 'Uploading to Cloud...';
+
+      try {
+        const title = document.getElementById('res-title').value.trim();
+        const year = document.getElementById('res-year').value;
+        const dept = document.getElementById('res-dept').value;
+        const sem = document.getElementById('res-sem').value;
+        const type = document.getElementById('res-type').value;
+        const subject = document.getElementById('res-subject').value.trim();
+        const rawText = document.getElementById('res-text').value.trim();
+        const fileInput = document.getElementById('res-file');
+
+        let pdfUrl = null;
+        if (fileInput.files && fileInput.files[0]) {
+          const file = fileInput.files[0];
+          const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const { error: upErr } = await sb.storage.from('pdfs').upload(cleanName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          if (upErr) throw upErr;
+
+          const { data: pubData } = sb.storage.from('pdfs').getPublicUrl(cleanName);
+          pdfUrl = pubData.publicUrl;
+        }
+
+        if (!pdfUrl && !rawText) {
+          throw new Error('Please attach a PDF file or enter fallback text notes.');
+        }
+
+        const { error: dbErr } = await sb.from('resources').insert([{
+          title, year, dept, sem, subject, type,
+          pdf_url: pdfUrl,
+          raw_text: rawText || null
+        }]);
+        if (dbErr) throw dbErr;
+
+        e.target.reset();
+        showToast('Published to KPRIT Cloud Hub!');
+        await fetchAllData();
+      } catch (err) {
+        showToast('Upload Failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Publish to Cloud Hub';
+      }
+    }
+
+    async function handleUpdatePost(e) {
+      e.preventDefault();
+      try {
+        const payload = {
+          title: document.getElementById('upd-title').value.trim(),
+          category: document.getElementById('upd-category').value,
+          priority: document.getElementById('upd-priority').value,
+          target: document.getElementById('upd-target').value.trim(),
+          exam_date: document.getElementById('upd-date').value.trim(),
+          body: document.getElementById('upd-body').value.trim()
+        };
+        const { error } = await sb.from('updates').insert([payload]);
+        if (error) throw error;
+
+        e.target.reset();
+        showToast('Notice Broadcasted Live!');
+        await fetchAllData();
+      } catch (err) {
+        showToast('Error: ' + err.message);
+      }
+    }
+
+    async function deleteResource(id) {
+      if (!confirm('Delete this study document permanently?')) return;
+      const { error } = await sb.from('resources').delete().eq('id', id);
+      if (error) {
+        showToast('Delete failed: ' + error.message);
+      } else {
+        showToast('Document removed');
+        await fetchAllData();
+      }
+    }
+
+    // 6. MOBILE-OPTIMIZED PDF.JS PROTECTED READER + WATERMARK
+    function buildWatermark() {
+      const layer = document.getElementById('watermark-layer');
+      const stamp = currentUser
+        ? `${currentUser.name} • ${currentUser.email}`
+        : 'KPRIT RESOURCE HUB • PROTECTED COPY';
+      layer.innerHTML = Array(10).fill(`<div class="watermark-item">${escapeHtml(stamp)}</div>`).join('');
+    }
+
+    async function openProtectedReader(id) {
+      const item = allResources.find(r => r.id === id);
+      if (!item) return;
+
+      // Require Google Sign-In for non-admin students so watermarks & logs work
+      if (!currentUser && !isAdmin) {
+        showToast('Please sign in with Google first to read protected PDFs');
+        signInWithGoogle();
+        return;
+      }
+
+      document.getElementById('reader-title').textContent = item.title;
+      document.getElementById('reader-subtitle').textContent = `${item.year} • ${item.dept} • ${item.sem} • ${item.subject}`;
+      document.getElementById('reader-modal').classList.add('open');
+      buildWatermark();
+
+      // Increment view count & log student read
+      sb.from('resources').update({ views: (item.views || 0) + 1 }).eq('id', id).then(() => fetchAllData());
+      logStudentVisit(item.title);
+
+      const canvasContainer = document.getElementById('pdf-canvas-container');
+      const textContainer = document.getElementById('text-doc-container');
+      const loader = document.getElementById('pdf-loading');
+
+      canvasContainer.innerHTML = '';
+      textContainer.style.display = 'none';
+      activePdfDoc = null;
+
+      if (item.pdf_url && window.pdfjsLib) {
+        loader.style.display = 'block';
+        document.getElementById('zoom-out-btn').style.display = 'inline-flex';
+        document.getElementById('zoom-in-btn').style.display = 'inline-flex';
+        document.getElementById('zoom-label').style.display = 'inline-block';
+
+        try {
+          const loadingTask = pdfjsLib.getDocument(item.pdf_url);
+          activePdfDoc = await loadingTask.promise;
+          loader.style.display = 'none';
+          await renderAllPdfPages();
+        } catch (err) {
+          loader.style.display = 'none';
+          canvasContainer.innerHTML = `
+            <div class="text-doc-view">
+              <p style="color: #fca5a5; margin-bottom: 10px;">Unable to render inline canvas (${escapeHtml(err.message)}).</p>
+              <a href="${item.pdf_url}" target="_blank" class="btn btn-primary">Open Direct Cloud PDF</a>
+            </div>`;
+        }
+      } else {
+        document.getElementById('zoom-out-btn').style.display = 'none';
+        document.getElementById('zoom-in-btn').style.display = 'none';
+        document.getElementById('zoom-label').style.display = 'none';
+        textContainer.style.display = 'block';
+        textContainer.textContent = item.raw_text || 'No content attached.';
+      }
+    }
+
+    async function renderAllPdfPages() {
+      if (!activePdfDoc) return;
+      const container = document.getElementById('pdf-canvas-container');
+      container.innerHTML = '';
+      document.getElementById('zoom-label').textContent = Math.round(currentScale * 100) + '%';
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      for (let pageNum = 1; pageNum <= activePdfDoc.numPages; pageNum++) {
+        const page = await activePdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: currentScale });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = Math.floor(viewport.width) + 'px';
+        canvas.style.height = Math.floor(viewport.height) + 'px';
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        container.appendChild(canvas);
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+      }
+    }
+
+    function changeZoom(delta) {
+      if (!activePdfDoc) return;
+      currentScale = Math.min(2.4, Math.max(0.7, +(currentScale + delta).toFixed(2)));
+      renderAllPdfPages();
+    }
+
+    function closeReader() {
+      document.getElementById('reader-modal').classList.remove('open');
+      document.getElementById('pdf-canvas-container').innerHTML = '';
+      activePdfDoc = null;
+    }
+
+    // 7. ANTI-SNIPPING & SHORTCUT GUARDRAILS
+    document.addEventListener('keydown', (e) => {
+      if (
+        e.key === 'PrintScreen' ||
+        (e.ctrlKey && ['p', 's', 'u', 'c'].includes(e.key.toLowerCase())) ||
+        (e.ctrlKey && e.shiftKey && ['i', 'j', 'c', 's'].includes(e.key.toLowerCase())) ||
+        (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key))
+      ) {
+        e.preventDefault();
+        triggerPrivacyCurtain();
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      if (document.getElementById('reader-modal').classList.contains('open')) {
+        document.getElementById('privacy-curtain').classList.add('active');
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      document.getElementById('privacy-curtain').classList.remove('active');
+    });
+
+    function triggerPrivacyCurtain() {
+      const curtain = document.getElementById('privacy-curtain');
+      curtain.classList.add('active');
+      setTimeout(() => curtain.classList.remove('active'), 2200);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Initialize App
+    updateAuthUI();
+    fetchAllData();
+  </script>
+</body>
+</html>
