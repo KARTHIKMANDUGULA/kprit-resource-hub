@@ -1133,24 +1133,44 @@
       }
     }
 
-    sb.auth.onAuthStateChange(async (event, session) => {
+    function applyGoogleSession(session) {
       if (session && session.user) {
         const meta = session.user.user_metadata || {};
         const name = meta.full_name || meta.name || session.user.email.split('@')[0];
         const email = session.user.email.toLowerCase();
 
-        googleUserSession = {
-          role: 'student',
-          name,
-          email
-        };
+        // Automatically grant Admin role if signed in with Karthik's official Google account
+        if (email === 'mandugula.karthik.work@gmail.com') {
+          const adminSession = {
+            role: 'admin',
+            name: name,
+            email: email
+          };
+          sessionStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, JSON.stringify(adminSession));
+          googleUserSession = adminSession;
+        } else {
+          googleUserSession = {
+            role: 'student',
+            name,
+            email
+          };
+        }
 
-        await recordStudentActivity(name, email, null);
+        // Render portal immediately so the user never waits on background logging
         renderApp();
+        syncFromSupabase(true);
+
+        if (googleUserSession.role === 'student') {
+          recordStudentActivity(name, email, null);
+        }
       } else {
         googleUserSession = null;
         renderApp();
       }
+    }
+
+    sb.auth.onAuthStateChange((event, session) => {
+      applyGoogleSession(session);
     });
 
     function openAdminModal() {
@@ -2059,8 +2079,14 @@
 
     // Initialize Application on Load
     window.addEventListener('DOMContentLoaded', async () => {
-      renderApp();
-      await syncFromSupabase(true);
+      // Explicitly check existing/redirect session first so OAuth callback opens immediately
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        applyGoogleSession(session);
+      } else {
+        renderApp();
+        await syncFromSupabase(true);
+      }
     });
   </script>
 </body>
