@@ -151,7 +151,7 @@
           Access curated mid-term Q&A banks, unit-wise lecture notes, and lab manuals organized by year, branch, and semester.
         </p>
 
-        <!-- Primary CTA: Real 1-Click Student Google Login -->
+        <!-- Primary CTA: Real 1-Click Google OAuth Login -->
         <button id="btn-google-login" onclick="signInWithGoogle()" class="w-full group relative flex items-center justify-center gap-3 bg-white hover:bg-slate-100 active:scale-[0.99] text-slate-900 font-semibold text-base py-3.5 px-6 rounded-2xl shadow-lg shadow-white/10 transition-all duration-200 cursor-pointer">
           <svg class="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
@@ -163,18 +163,10 @@
           <i data-lucide="arrow-right" class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform"></i>
         </button>
 
-        <p class="text-[11px] text-slate-500 mt-3 flex items-center justify-center gap-1.5">
+        <p class="text-[11px] text-slate-500 mt-4 flex items-center justify-center gap-1.5">
           <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-500"></i>
           One-click login • Stays signed in automatically
         </p>
-
-        <!-- Subtle Secondary Admin Login Link Underneath -->
-        <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-center">
-          <button onclick="openAdminModal()" class="text-xs text-slate-500 hover:text-indigo-400 transition-colors inline-flex items-center gap-1.5 py-1 px-2 rounded-lg cursor-pointer">
-            <i data-lucide="lock" class="w-3 h-3"></i>
-            <span>Admin Login</span>
-          </button>
-        </div>
       </div>
     </main>
 
@@ -183,45 +175,6 @@
       Built for KPRIT Students • Curated by Karthik Mandugula •
       <button onclick="openPrivacyModal()" class="underline hover:text-slate-300 cursor-pointer">Privacy Policy</button>
     </footer>
-  </div>
-
-  <!-- =====================================================================
-       MODAL B: ADMIN PASSWORD LOGIN MODAL
-  ====================================================================== -->
-  <div id="admin-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-    <div class="bg-slate-900 text-white rounded-3xl max-w-sm w-full p-6 sm:p-7 shadow-2xl border border-slate-800">
-      <div class="flex items-center justify-between mb-5">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400">
-            <i data-lucide="shield-alert" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="font-bold text-base leading-tight">Admin Verification</h3>
-            <p class="text-[11px] text-slate-400">Restricted to Portal Owner</p>
-          </div>
-        </div>
-        <button onclick="closeAdminModal()" class="p-1.5 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <form onsubmit="handleAdminLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1.5">Enter Admin Password</label>
-          <div class="relative">
-            <input type="password" id="admin-password-input" required placeholder="••••••••••" class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 outline-none" />
-          </div>
-          <p id="admin-error-msg" class="hidden text-xs text-rose-400 mt-2 flex items-center gap-1">
-            <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
-            <span id="admin-error-text">Incorrect admin password. Access denied.</span>
-          </p>
-        </div>
-
-        <button type="submit" id="admin-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm py-3 rounded-xl shadow-lg shadow-indigo-600/25 transition-all cursor-pointer">
-          Unlock Admin Command Center
-        </button>
-      </form>
-    </div>
   </div>
 
   <!-- =====================================================================
@@ -258,7 +211,7 @@
 
         <!-- User Profile & Actions -->
         <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Admin Mode Switcher (Only visible when logged in as Admin) -->
+          <!-- Admin Mode Switcher (Only visible when signed in with Karthik's Google account) -->
           <div id="admin-nav-switch" class="hidden items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button onclick="switchAdminView('dashboard')" id="nav-btn-admin" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer">
               Admin Panel
@@ -534,7 +487,7 @@
           <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 class="font-bold text-slate-900 text-lg">Live Student Directory & Activity Log</h3>
-              <p class="text-xs text-slate-500">Every student login and PDF read is automatically recorded in Supabase</p>
+              <p class="text-xs text-slate-500">Protected by Supabase RLS — Only visible to Admin</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
@@ -578,7 +531,7 @@
             </div>
             <div>
               <h3 class="font-bold text-slate-900">Publish New Study Material</h3>
-              <p class="text-xs text-slate-500">Uploads directly to Supabase Cloud Storage</p>
+              <p class="text-xs text-slate-500">Uploads directly to Supabase Private Cloud Storage</p>
             </div>
           </div>
 
@@ -635,9 +588,9 @@
 
             <!-- Upload Real PDF File OR Write Formatted Q&A -->
             <div class="p-3.5 rounded-2xl bg-slate-50 border border-dashed border-slate-300">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Attach PDF File (Cloud Hosted)</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Attach PDF File (Private Cloud Hosted)</label>
               <input type="file" id="up-pdf-file" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
-              <p class="text-[11px] text-slate-400 mt-1">Uploaded PDFs render smoothly on both Mobile & Desktop inside the watermarked viewer.</p>
+              <p class="text-[11px] text-slate-400 mt-1">Uploaded PDFs open via 60-second expiring signed links inside the watermarked viewer.</p>
             </div>
 
             <div>
@@ -842,14 +795,21 @@
     // -----------------------------------------------------------------------
     const SUPABASE_URL = 'https://zzklpylokfhtlxhrnqqx.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_7Ik44J6c92t43JgBmLdKLQ_UQEWIpy2';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const ADMIN_EMAIL = 'mandugula.karthik.work@gmail.com';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
 
     if (window.pdfjsLib) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
     // -----------------------------------------------------------------------
-    // 2. INITIAL SEED DATA (Auto-synced to Supabase if tables are empty)
+    // 2. INITIAL SEED DATA (Only inserted when Admin logs in to empty DB)
     // -----------------------------------------------------------------------
     const SEED_RESOURCES = [
       {
@@ -972,18 +932,10 @@
     // -----------------------------------------------------------------------
     // 3. STATE & SECURITY HELPERS
     // -----------------------------------------------------------------------
-    const STORAGE_KEYS = {
-      ADMIN_SESSION: 'kprit_hub_admin_session_v3',
-      LOCKOUT: 'kprit_hub_admin_lockout_v3'
-    };
-
-    // SHA-256 hash of 'karthik13'
-    const ADMIN_PASSWORD_SHA256 = '3f6a9942a4a738373380c1759a0e27c11c9e26e98967d6238a81d18f782221c9';
-
     let cloudResources = [];
     let cloudUpdates = [];
     let cloudStudents = [];
-    let googleUserSession = null;
+    let activeUserSession = null;
 
     let activePdfDoc = null;
     let pdfScale = window.innerWidth < 640 ? 1.05 : 1.3;
@@ -996,13 +948,6 @@
     };
 
     let currentUpdateCategory = 'All';
-
-    async function sha256Hex(message) {
-      const msgBuffer = new TextEncoder().encode(message);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
 
     function escapeHTML(str) {
       if (str === null || str === undefined) return '';
@@ -1035,52 +980,60 @@
     }
 
     function getSession() {
-      const adminRaw = sessionStorage.getItem(STORAGE_KEYS.ADMIN_SESSION);
-      if (adminRaw) {
-        try {
-          const parsed = JSON.parse(adminRaw);
-          if (parsed && parsed.role === 'admin') return parsed;
-        } catch {}
+      return activeUserSession;
+    }
+
+    // Extract clean storage file path from either a raw filename or a legacy public URL
+    function extractStoragePath(pdfRef) {
+      if (!pdfRef) return null;
+      const marker = '/storage/v1/object/public/pdfs/';
+      const idx = pdfRef.indexOf(marker);
+      if (idx !== -1) {
+        return decodeURIComponent(pdfRef.slice(idx + marker.length));
       }
-      return googleUserSession;
+      return pdfRef;
     }
 
     // -----------------------------------------------------------------------
-    // 4. CLOUD SYNC ENGINE (Supabase PostgreSQL)
+    // 4. CLOUD SYNC ENGINE (Role-Scoped Supabase Queries)
     // -----------------------------------------------------------------------
     async function syncFromSupabase(seedIfEmpty = true) {
       try {
-        const [resResp, updResp, stuResp] = await Promise.all([
+        const session = getSession();
+        if (!session) return; // Never query database before authentication
+
+        const [resResp, updResp] = await Promise.all([
           sb.from('resources').select('*').order('created_at', { ascending: false }),
-          sb.from('updates').select('*').order('created_at', { ascending: false }),
-          sb.from('student_logs').select('*').order('last_active', { ascending: false })
+          sb.from('updates').select('*').order('created_at', { ascending: false })
         ]);
 
         if (resResp.data) cloudResources = resResp.data;
         if (updResp.data) cloudUpdates = updResp.data;
-        if (stuResp.data) cloudStudents = stuResp.data;
 
-        // Auto-seed initial KPRIT 1st-year notes & Mid-Term alerts if database is brand new
-        if (seedIfEmpty && cloudResources.length === 0 && !sessionStorage.getItem('kprit_seeded_v1')) {
-          sessionStorage.setItem('kprit_seeded_v1', 'true');
-          await sb.from('resources').insert(SEED_RESOURCES);
-          if (cloudUpdates.length === 0) {
-            await sb.from('updates').insert(SEED_UPDATES);
+        // ONLY fetch student_logs if the logged-in user is verified as Admin
+        if (session.role === 'admin') {
+          const stuResp = await sb.from('student_logs').select('*').order('last_active', { ascending: false });
+          if (stuResp.data) cloudStudents = stuResp.data;
+
+          // Auto-seed initial KPRIT 1st-year notes & Mid-Term alerts only when Admin logs in to an empty DB
+          if (seedIfEmpty && cloudResources.length === 0 && !sessionStorage.getItem('kprit_seeded_v1')) {
+            sessionStorage.setItem('kprit_seeded_v1', 'true');
+            await sb.from('resources').insert(SEED_RESOURCES);
+            if (cloudUpdates.length === 0) {
+              await sb.from('updates').insert(SEED_UPDATES);
+            }
+            return syncFromSupabase(false);
           }
-          return syncFromSupabase(false);
         }
 
         updateUpdatesBadges();
-        const session = getSession();
-        if (session) {
-          if (session.role === 'admin') {
-            renderAdminDashboard();
-            renderAdminResourceManager();
-            renderAdminUpdatesManager();
-          }
-          renderStudentResources();
-          renderStudentUpdates();
+        if (session.role === 'admin') {
+          renderAdminDashboard();
+          renderAdminResourceManager();
+          renderAdminUpdatesManager();
         }
+        renderStudentResources();
+        renderStudentUpdates();
       } catch (err) {
         console.error('Supabase sync error:', err);
       }
@@ -1116,7 +1069,7 @@
     }
 
     // -----------------------------------------------------------------------
-    // 6. REAL GOOGLE OAUTH & ADMIN AUTHENTICATION FLOWS
+    // 6. GOOGLE OAUTH AUTHENTICATION FLOW (Single Lifecycle Listener)
     // -----------------------------------------------------------------------
     async function signInWithGoogle() {
       const btn = document.getElementById('btn-google-login');
@@ -1139,54 +1092,30 @@
         const name = meta.full_name || meta.name || session.user.email.split('@')[0];
         const email = session.user.email.toLowerCase();
 
-        // Automatically grant Admin role if signed in with Karthik's official Google account
-        if (email === 'mandugula.karthik.work@gmail.com') {
-          const adminSession = {
-            role: 'admin',
-            name: name,
-            email: email
-          };
-          sessionStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, JSON.stringify(adminSession));
-          googleUserSession = adminSession;
-        } else {
-          googleUserSession = {
-            role: 'student',
-            name,
-            email
-          };
-        }
+        activeUserSession = {
+          role: email === ADMIN_EMAIL ? 'admin' : 'student',
+          name,
+          email
+        };
 
-        // Render portal immediately so the user never waits on background logging
         renderApp();
         syncFromSupabase(true);
 
-        if (googleUserSession.role === 'student') {
+        if (activeUserSession.role === 'student') {
           recordStudentActivity(name, email, null);
         }
       } else {
-        googleUserSession = null;
+        activeUserSession = null;
+        cloudStudents = [];
         renderApp();
       }
     }
 
+    // Single authoritative auth listener (ignores TOKEN_REFRESHED so active view/tab never resets)
     sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED') return;
       applyGoogleSession(session);
     });
-
-    function openAdminModal() {
-      const modal = document.getElementById('admin-modal');
-      document.getElementById('admin-password-input').value = '';
-      document.getElementById('admin-error-msg').classList.add('hidden');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      setTimeout(() => document.getElementById('admin-password-input').focus(), 80);
-    }
-
-    function closeAdminModal() {
-      const modal = document.getElementById('admin-modal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
 
     function openPrivacyModal() {
       const modal = document.getElementById('privacy-modal');
@@ -1200,52 +1129,9 @@
       modal.classList.remove('flex');
     }
 
-    async function handleAdminLogin(e) {
-      e.preventDefault();
-      const input = document.getElementById('admin-password-input').value;
-      const err = document.getElementById('admin-error-msg');
-      const errText = document.getElementById('admin-error-text');
-
-      const lockRaw = localStorage.getItem(STORAGE_KEYS.LOCKOUT);
-      const lockState = lockRaw ? JSON.parse(lockRaw) : { attempts: 0, lockedUntil: 0 };
-
-      if (lockState.lockedUntil && Date.now() < lockState.lockedUntil) {
-        const secs = Math.ceil((lockState.lockedUntil - Date.now()) / 1000);
-        errText.textContent = `Too many failed attempts. Try again in ${secs}s.`;
-        err.classList.remove('hidden');
-        return;
-      }
-
-      const hashedInput = await sha256Hex(input);
-      if (hashedInput === ADMIN_PASSWORD_SHA256 || input === 'karthik13') {
-        localStorage.removeItem(STORAGE_KEYS.LOCKOUT);
-        err.classList.add('hidden');
-        closeAdminModal();
-        const adminSession = {
-          role: 'admin',
-          name: 'Karthik Mandugula',
-          email: 'mandugula.karthik.work@gmail.com'
-        };
-        sessionStorage.setItem(STORAGE_KEYS.ADMIN_SESSION, JSON.stringify(adminSession));
-        showToast('Welcome back, Admin Karthik!');
-        renderApp();
-      } else {
-        lockState.attempts = (lockState.attempts || 0) + 1;
-        if (lockState.attempts >= 5) {
-          lockState.lockedUntil = Date.now() + 60 * 1000;
-          lockState.attempts = 0;
-          errText.textContent = 'Too many failed attempts. Locked for 60 seconds.';
-        } else {
-          errText.textContent = `Incorrect password (${5 - lockState.attempts} attempts left).`;
-        }
-        localStorage.setItem(STORAGE_KEYS.LOCKOUT, JSON.stringify(lockState));
-        err.classList.remove('hidden');
-      }
-    }
-
     async function logout() {
-      sessionStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION);
-      googleUserSession = null;
+      activeUserSession = null;
+      cloudStudents = [];
       await sb.auth.signOut();
       showToast('Logged out successfully', 'info');
       renderApp();
@@ -1253,16 +1139,21 @@
 
     async function recordStudentActivity(name, email, docTitle) {
       try {
-        const existing = cloudStudents.find(s => s.email.toLowerCase() === email.toLowerCase());
-        const nextReads = docTitle ? ((existing?.docs_read || 0) + 1) : (existing?.docs_read || 0);
+        const cleanEmail = email.toLowerCase();
+        const { data: ownRow } = await sb
+          .from('student_logs')
+          .select('docs_read, last_doc')
+          .eq('email', cleanEmail)
+          .maybeSingle();
+
+        const nextReads = docTitle ? ((ownRow?.docs_read || 0) + 1) : (ownRow?.docs_read || 0);
         await sb.from('student_logs').upsert({
-          email: email.toLowerCase(),
+          email: cleanEmail,
           full_name: name,
           last_active: new Date().toISOString(),
           docs_read: nextReads,
-          last_doc: docTitle || existing?.last_doc || 'Logged in to Portal'
+          last_doc: docTitle || ownRow?.last_doc || 'Logged in to Portal'
         }, { onConflict: 'email' });
-        await syncFromSupabase(false);
       } catch (err) {
         console.warn('Activity log error:', err);
       }
@@ -1277,6 +1168,8 @@
       const appView = document.getElementById('app-view');
 
       if (!session) {
+        const loginBtn = document.getElementById('btn-google-login');
+        if (loginBtn) loginBtn.disabled = false;
         authView.classList.remove('hidden');
         appView.classList.add('hidden');
         lucide.createIcons();
@@ -1513,7 +1406,7 @@
             </div>
             <h3 class="font-bold text-slate-800 text-base">No notes uploaded for this filter yet</h3>
             <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-              Switch to <strong>1st Year → CSE → Sem 1</strong> to explore the live Mid-Term Q&A sets, or log in as Admin to publish new notes for this branch.
+              Switch to <strong>1st Year → CSE → Sem 1</strong> to explore the live Mid-Term Q&A sets, or check back soon as new notes are published.
             </p>
           </div>
         `;
@@ -1561,19 +1454,18 @@
     }
 
     // -----------------------------------------------------------------------
-    // 9. PROTECTED IN-BROWSER DOCUMENT VIEWER (WATERMARKED + MOBILE PDF.JS)
+    // 9. PROTECTED IN-BROWSER DOCUMENT VIEWER (SIGNED URLS + WATERMARKED PDF.JS)
     // -----------------------------------------------------------------------
     async function openProtectedReader(resourceId) {
-      const doc = cloudResources.find(r => r.id === resourceId);
+      const doc = cloudResources.find(r => String(r.id) === String(resourceId));
       if (!doc) return;
 
       const session = getSession();
       if (!session) return;
 
-      // Increment view count in Supabase
-      const nextViews = (doc.views || 0) + 1;
-      doc.views = nextViews;
-      sb.from('resources').update({ views: nextViews }).eq('id', resourceId).then(() => {});
+      // Increment view count safely via PostgreSQL SECURITY DEFINER RPC function
+      doc.views = (doc.views || 0) + 1;
+      sb.rpc('increment_views', { row_id: doc.id }).then(() => {});
 
       if (session.role === 'student') {
         recordStudentActivity(session.name, session.email, doc.title);
@@ -1606,12 +1498,24 @@
         zoomControls.classList.add('flex');
         bodyContainer.innerHTML = `
           <div id="pdf-loading-msg" class="text-center py-12 text-xs font-semibold text-indigo-600">
-            Rendering protected PDF pages for your screen...
+            Generating 60-second encrypted stream & rendering pages...
           </div>
           <div id="pdf-canvas-wrapper" class="flex flex-col items-center gap-4"></div>
         `;
         try {
-          activePdfDoc = await pdfjsLib.getDocument(doc.pdf_url).promise;
+          const storagePath = extractStoragePath(doc.pdf_url);
+          let streamUrl = doc.pdf_url;
+
+          if (storagePath && !storagePath.startsWith('http')) {
+            const { data: signedData, error: signErr } = await sb.storage
+              .from('pdfs')
+              .createSignedUrl(storagePath, 60);
+            if (!signErr && signedData?.signedUrl) {
+              streamUrl = signedData.signedUrl;
+            }
+          }
+
+          activePdfDoc = await pdfjsLib.getDocument(streamUrl).promise;
           const msg = document.getElementById('pdf-loading-msg');
           if (msg) msg.remove();
           await renderPdfCanvases();
@@ -1626,7 +1530,6 @@
         zoomControls.classList.add('hidden');
         zoomControls.classList.remove('flex');
 
-        // Parse structured Q&A JSON if stored as JSON, otherwise render clean text
         let parsedBlocks = null;
         if (doc.raw_text) {
           try {
@@ -1972,7 +1875,7 @@
     }
 
     // -----------------------------------------------------------------------
-    // 11. ADMIN CLOUD RESOURCE UPLOAD & DELETE
+    // 11. ADMIN CLOUD RESOURCE UPLOAD & DELETE (With Storage Cleanup)
     // -----------------------------------------------------------------------
     async function handleAdminUpload(e) {
       e.preventDefault();
@@ -1996,7 +1899,7 @@
         const rawText = document.getElementById('up-content').value.trim();
         const fileInput = document.getElementById('up-pdf-file');
 
-        let pdfUrl = null;
+        let pdfPath = null;
         if (fileInput.files && fileInput.files[0]) {
           const file = fileInput.files[0];
           const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -2006,8 +1909,7 @@
           });
           if (uploadErr) throw uploadErr;
 
-          const { data: pub } = sb.storage.from('pdfs').getPublicUrl(cleanName);
-          pdfUrl = pub.publicUrl;
+          pdfPath = cleanName;
         }
 
         const { error: insertErr } = await sb.from('resources').insert([{
@@ -2018,8 +1920,8 @@
           subject,
           type,
           views: 1,
-          pdf_url: pdfUrl,
-          raw_text: rawText || (pdfUrl ? null : `Curated study material for ${subject} (${year} ${dept} ${sem}).`)
+          pdf_url: pdfPath,
+          raw_text: rawText || (pdfPath ? null : `Curated study material for ${subject} (${year} ${dept} ${sem}).`)
         }]);
         if (insertErr) throw insertErr;
 
@@ -2037,6 +1939,15 @@
     async function deleteResource(id) {
       const session = getSession();
       if (!session || session.role !== 'admin') return;
+
+      // Clean up the PDF file from Supabase Storage before deleting the database row
+      const target = cloudResources.find(r => String(r.id) === String(id));
+      if (target && target.pdf_url) {
+        const storagePath = extractStoragePath(target.pdf_url);
+        if (storagePath && !storagePath.startsWith('http')) {
+          await sb.storage.from('pdfs').remove([storagePath]);
+        }
+      }
 
       const { error } = await sb.from('resources').delete().eq('id', id);
       if (error) {
@@ -2057,7 +1968,7 @@
             <div class="flex flex-wrap items-center gap-1.5 mb-1">
               <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">${escapeHTML(item.year)} • ${escapeHTML(item.dept)} • ${escapeHTML(item.sem)}</span>
               <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">${escapeHTML(item.type)}</span>
-              ${item.pdf_url ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">Cloud PDF</span>' : ''}
+              ${item.pdf_url ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">Protected PDF</span>' : ''}
             </div>
             <h4 class="font-bold text-sm text-slate-900 truncate">${escapeHTML(item.title)}</h4>
             <p class="text-xs text-slate-500">${escapeHTML(item.subject)} • <span class="font-semibold text-slate-700">${item.views || 0} reads</span></p>
@@ -2077,17 +1988,8 @@
       lucide.createIcons();
     }
 
-    // Initialize Application on Load
-    window.addEventListener('DOMContentLoaded', async () => {
-      // Explicitly check existing/redirect session first so OAuth callback opens immediately
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        applyGoogleSession(session);
-      } else {
-        renderApp();
-        await syncFromSupabase(true);
-      }
-    });
+    // Initialize icons on initial paint; session routing is driven by onAuthStateChange
+    lucide.createIcons();
   </script>
 </body>
 </html>
