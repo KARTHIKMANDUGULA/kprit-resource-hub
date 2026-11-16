@@ -185,20 +185,20 @@
     <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <!-- Brand -->
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm">
+        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-sm shrink-0">
             <i data-lucide="book-open-check" class="w-5 h-5"></i>
           </div>
-          <div>
+          <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <span class="font-bold text-slate-900 tracking-tight">KPRIT Resource Hub</span>
-              <span id="role-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">Student</span>
+              <span class="font-bold text-slate-900 tracking-tight text-sm sm:text-base whitespace-nowrap">KPRIT Hub</span>
+              <span id="role-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 shrink-0">Student</span>
             </div>
             <p class="text-[11px] text-slate-500 hidden sm:block">Kommuri Pratap Reddy Institute of Technology</p>
           </div>
         </div>
 
-        <!-- Student Main Tab Switcher (Resources vs Important Updates) -->
+        <!-- Student Main Tab Switcher (Desktop/Tablet only) -->
         <div id="student-nav-tabs" class="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
           <button onclick="switchStudentTab('resources')" id="st-tab-resources" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer">
             Study Resources
@@ -210,7 +210,7 @@
         </div>
 
         <!-- User Profile & Actions -->
-        <div class="flex items-center gap-2 sm:gap-3">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
           <!-- Admin Mode Switcher (Only visible when signed in with Karthik's Google account) -->
           <div id="admin-nav-switch" class="hidden items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button onclick="switchAdminView('dashboard')" id="nav-btn-admin" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer">
@@ -1205,8 +1205,7 @@
         roleBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700';
         adminSwitch.classList.add('hidden');
         adminSwitch.classList.remove('inline-flex');
-        studentNavTabs.classList.remove('hidden');
-        studentNavTabs.classList.add('sm:flex');
+        studentNavTabs.classList.add('hidden', 'sm:flex');
         studentMobTabs.classList.remove('hidden');
         document.getElementById('admin-command-section').classList.add('hidden');
         document.getElementById('student-portal-section').classList.remove('hidden');
@@ -1635,10 +1634,12 @@
       const studentSection = document.getElementById('student-portal-section');
       const btnAdmin = document.getElementById('nav-btn-admin');
       const btnPreview = document.getElementById('nav-btn-preview');
+      const studentMobTabs = document.getElementById('student-mobile-tabs');
 
       if (mode === 'dashboard') {
         adminSection.classList.remove('hidden');
         studentSection.classList.add('hidden');
+        studentMobTabs.classList.add('hidden');
         btnAdmin.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer';
         btnPreview.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
         renderAdminDashboard();
@@ -1647,6 +1648,7 @@
       } else {
         adminSection.classList.add('hidden');
         studentSection.classList.remove('hidden');
+        studentMobTabs.classList.remove('hidden');
         btnPreview.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer';
         btnAdmin.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
         switchStudentTab('resources');
