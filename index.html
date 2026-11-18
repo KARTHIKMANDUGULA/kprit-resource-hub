@@ -16,6 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Mozilla PDF.js for Mobile & Desktop Canvas Rendering -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- pdf-lib for Client-Side Browser PDF Auto-Compression -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <!-- EmailJS Browser SDK for Automated Zero-Cost Email Notifications -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -81,14 +85,47 @@
       scrollbar-width: none;
     }
 
-    /* Mobile-Responsive PDF.js Canvas Styling */
-    #pdf-canvas-wrapper canvas {
-      max-width: 100%;
-      height: auto !important;
+    /* Pre-allocated Ordered PDF Page Slots & Crisp High-DPI Canvases */
+    .pdf-page-slot {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
       border-radius: 0.75rem;
       box-shadow: 0 4px 18px rgba(15, 23, 42, 0.12);
       border: 1px solid #e2e8f0;
+      overflow: hidden;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 100%;
+    }
+
+    .pdf-page-slot canvas {
+      display: block;
+      max-width: 100%;
+      height: auto !important;
       background: #ffffff;
+    }
+
+    /* Fullscreen Reader Mode & Auto-Hide Controls */
+    #reader-modal.reader-fullscreen #reader-paper-card {
+      max-width: 100% !important;
+      border-radius: 0 !important;
+      padding: 0.75rem !important;
+      min-height: 100vh;
+    }
+
+    #reader-modal.controls-hidden #reader-top-toolbar,
+    #reader-modal.controls-hidden #pdf-scrubber-bar {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-8px);
+    }
+
+    #reader-top-toolbar,
+    #pdf-scrubber-bar {
+      transition: opacity 0.22s ease, transform 0.22s ease;
     }
 
     @media print {
@@ -170,7 +207,7 @@
       </div>
     </main>
 
-    <!-- Footer -->
+    <!-- Footer (Permanent Creator Proof) -->
     <footer class="relative z-10 text-center py-5 text-xs text-slate-500">
       Built for KPRIT Students • Curated by Karthik Mandugula •
       <button onclick="openPrivacyModal()" class="underline hover:text-slate-300 cursor-pointer">Privacy Policy</button>
@@ -211,7 +248,7 @@
 
         <!-- User Profile & Actions -->
         <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-          <!-- Admin Mode Switcher (Only visible when signed in with Karthik's Google account) -->
+          <!-- Admin / Contributor Mode Switcher (Visible for Super Admin, Faculty, or CR) -->
           <div id="admin-nav-switch" class="hidden items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button onclick="switchAdminView('dashboard')" id="nav-btn-admin" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer">
               Admin Panel
@@ -301,8 +338,9 @@
 
             <!-- Department, Semester & Search -->
             <div class="flex flex-wrap sm:flex-nowrap items-center gap-3">
-              <select id="dept-filter" onchange="setFilter('dept', this.value)" class="w-full sm:w-40 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <select id="dept-filter" onchange="setFilter('dept', this.value)" class="w-full sm:w-44 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option value="CSE">Branch: CSE</option>
+                <option value="CSM">Branch: CSM (AI & ML)</option>
                 <option value="ECE">Branch: ECE</option>
                 <option value="EEE">Branch: EEE</option>
                 <option value="Mechanical">Branch: Mech</option>
@@ -374,33 +412,42 @@
     </main>
 
     <!-- ===================================================================
-         SUB-VIEW 2B: ADMIN COMMAND CENTER (Exclusive to Karthik)
+         SUB-VIEW 2B: ADMIN & CONTRIBUTOR COMMAND CENTER
     ==================================================================== -->
     <main id="admin-command-section" class="hidden flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <!-- Admin Top Header & Tabs -->
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
         <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Owner Command Center</span>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Admin Portal & Live Analytics</h1>
+          <span id="admin-header-subtitle" class="text-xs font-bold uppercase tracking-wider text-indigo-600">Owner Command Center</span>
+          <h1 id="admin-header-title" class="text-2xl sm:text-3xl font-extrabold text-slate-900">Admin Portal & Live Analytics</h1>
         </div>
 
         <div class="flex flex-wrap bg-slate-200/70 p-1 rounded-2xl self-start gap-1">
           <button onclick="switchAdminTab('analytics')" id="tab-btn-analytics" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer">
             <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-            Live Analytics & Users
+            <span>Live Analytics</span>
+          </button>
+          <button onclick="switchAdminTab('approvals')" id="tab-btn-approvals" class="hidden items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            <i data-lucide="file-check-2" class="w-4 h-4"></i>
+            <span>Pending Approvals</span>
+            <span id="pending-approvals-badge" class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-600 text-white">0</span>
           </button>
           <button onclick="switchAdminTab('resources')" id="tab-btn-resources" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             <i data-lucide="folder-plus" class="w-4 h-4"></i>
-            Upload & Manage PDFs
+            <span>Upload & Manage PDFs</span>
           </button>
           <button onclick="switchAdminTab('updates')" id="tab-btn-updates" class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
             <i data-lucide="megaphone" class="w-4 h-4"></i>
-            Post Important Updates
+            <span>Post Updates</span>
+          </button>
+          <button onclick="switchAdminTab('access')" id="tab-btn-access" class="hidden items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Manage Access (RBAC)</span>
           </button>
         </div>
       </div>
 
-      <!-- ADMIN TAB 1: LIVE ANALYTICS DASHBOARD -->
+      <!-- ADMIN TAB 1: LIVE ANALYTICS DASHBOARD (Super Admin Only) -->
       <div id="admin-tab-analytics" class="space-y-6">
         <!-- KPI Summary Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -487,7 +534,7 @@
           <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 class="font-bold text-slate-900 text-lg">Live Student Directory & Activity Log</h3>
-              <p class="text-xs text-slate-500">Protected by Supabase RLS — Only visible to Admin</p>
+              <p class="text-xs text-slate-500">Protected by Supabase RLS — Only visible to Super Admin</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
@@ -521,17 +568,84 @@
         </div>
       </div>
 
-      <!-- ADMIN TAB 2: UPLOAD & MANAGE DOCUMENTS -->
+      <!-- ADMIN TAB 2: SUPER-ADMIN PENDING APPROVALS & KPRIT HUB AI MODERATION -->
+      <div id="admin-tab-approvals" class="hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <!-- Pending Uploads Queue (8 cols) -->
+          <div class="lg:col-span-8 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center">
+                  <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-slate-900">Super-Admin Pending Approvals Queue</h3>
+                  <p class="text-xs text-slate-500">Verify CR & Faculty uploads, inspect auto-compression telemetry, and trigger KPRIT Hub AI emails</p>
+                </div>
+              </div>
+              <span id="approvals-queue-count-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">0 Pending</span>
+            </div>
+
+            <div id="admin-pending-approvals-list" class="space-y-4">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Cloud-Synced EmailJS Configuration Card (4 cols) -->
+          <div class="lg:col-span-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm self-start space-y-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                <i data-lucide="mail-check" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-sm">KPRIT Hub AI • EmailJS Cloud Sync</h3>
+                <p class="text-[11px] text-slate-500">Synced across all CR & Faculty devices</p>
+              </div>
+            </div>
+
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Saved directly to Supabase (`portal_settings`) so CRs' and Faculty's phones automatically email you on <strong>New Pending Uploads</strong>, and your approvals/rejections email them back.
+            </p>
+
+            <form onsubmit="saveEmailJsConfig(event)" class="space-y-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">EmailJS Public Key</label>
+                <input type="text" id="ejs-public-key" placeholder="e.g. user_xxxxxx / pub_xxxxxx" class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">EmailJS Service ID</label>
+                <input type="text" id="ejs-service-id" placeholder="e.g. service_kprit_hub" class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-700 mb-1">EmailJS Template ID</label>
+                <input type="text" id="ejs-template-id" placeholder="e.g. template_kprit_ai" class="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <button type="submit" id="btn-save-emailjs" class="w-full bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-xs py-2.5 rounded-xl transition-colors cursor-pointer">
+                Save & Sync EmailJS to Cloud
+              </button>
+            </form>
+
+            <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 space-y-1">
+              <p class="font-bold text-slate-700">Template Variables Sent Automatically:</p>
+              <p class="font-mono text-[10px]">{{to_email}}, {{to_name}}, {{subject_line}}, {{message_body}}, {{doc_title}}, {{uploader_email}}, {{compression_summary}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN TAB 3: UPLOAD & MANAGE DOCUMENTS (Auto-Compression + Hybrid Storage) -->
       <div id="admin-tab-resources" class="hidden grid-cols-1 lg:grid-cols-12 gap-6">
         <!-- Upload New Resource Form (5 cols) -->
         <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm self-start">
-          <div class="flex items-center gap-2.5 mb-5">
-            <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
-              <i data-lucide="upload-cloud" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-slate-900">Publish New Study Material</h3>
-              <p class="text-xs text-slate-500">Uploads directly to Supabase Private Cloud Storage</p>
+          <div class="flex items-center justify-between gap-2.5 mb-5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900">Publish New Study Material</h3>
+                <p id="upload-scope-hint" class="text-xs text-slate-500">Auto-Compressed & Moderated by KPRIT Hub AI</p>
+              </div>
             </div>
           </div>
 
@@ -555,6 +669,7 @@
                 <label class="block text-xs font-semibold text-slate-700 mb-1">Department *</label>
                 <select id="up-dept" class="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 bg-white">
                   <option value="CSE">CSE</option>
+                  <option value="CSM">CSM (AI & ML)</option>
                   <option value="ECE">ECE</option>
                   <option value="EEE">EEE</option>
                   <option value="Mechanical">Mechanical</option>
@@ -586,16 +701,29 @@
               <input type="text" id="up-subject" required placeholder="e.g. Engineering Chemistry" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
 
-            <!-- Upload Real PDF File OR Write Formatted Q&A -->
-            <div class="p-3.5 rounded-2xl bg-slate-50 border border-dashed border-slate-300">
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Attach PDF File (Private Cloud Hosted)</label>
-              <input type="file" id="up-pdf-file" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
-              <p class="text-[11px] text-slate-400 mt-1">Uploaded PDFs open via 60-second expiring signed links inside the watermarked viewer.</p>
+            <!-- Option A: Upload Real PDF File (With Client-Side Auto-Compression) -->
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-dashed border-slate-300 space-y-2.5">
+              <div>
+                <div class="flex items-center justify-between mb-1">
+                  <label class="block text-xs font-semibold text-slate-700">Option 1: Upload PDF File (Auto-Compressed)</label>
+                  <label class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 cursor-pointer">
+                    <input type="checkbox" id="up-auto-compress" checked class="accent-indigo-600 rounded cursor-pointer" />
+                    <span>Smart Compress</span>
+                  </label>
+                </div>
+                <input type="file" id="up-pdf-file" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
+                <p id="compression-live-status" class="text-[10px] text-slate-500 mt-1">Automatically optimizes PDF pages in browser & records size telemetry before upload.</p>
+              </div>
+
+              <div class="pt-2 border-t border-slate-200/80">
+                <label class="block text-xs font-semibold text-indigo-700 mb-1">Option 2: External CDN PDF URL (Unlimited Zero-Egress Bandwidth)</label>
+                <input type="url" id="up-cdn-url" placeholder="https://cdn.jsdelivr.net/gh/user/repo@main/notes.pdf" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" />
+              </div>
             </div>
 
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Curated Q&A / Summary Notes (Displayed if no PDF attached)</label>
-              <textarea id="up-content" rows="4" placeholder="Paste key exam questions & answers here..." class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+              <textarea id="up-content" rows="3" placeholder="Paste key exam questions & answers here..." class="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
             </div>
 
             <button type="submit" id="btn-publish-resource" class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold text-sm py-3 rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer">
@@ -605,12 +733,12 @@
           </form>
         </div>
 
-        <!-- Existing Documents Manager (7 cols) -->
+        <!-- Existing Documents & Contributor Upload History Manager (7 cols) -->
         <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <div class="flex items-center justify-between mb-5">
             <div>
-              <h3 class="font-bold text-slate-900">Published Resource Library</h3>
-              <p class="text-xs text-slate-500">Manage all cloud-synced notes & Mid-Term Q&A sets</p>
+              <h3 class="font-bold text-slate-900">Resource Library & Upload Moderation Status</h3>
+              <p class="text-xs text-slate-500">Track approved notes, compression savings, and KPRIT Hub AI moderation logs</p>
             </div>
             <span id="admin-total-docs-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700">0 Files</span>
           </div>
@@ -621,7 +749,7 @@
         </div>
       </div>
 
-      <!-- ADMIN TAB 3: POST & MANAGE IMPORTANT UPDATES -->
+      <!-- ADMIN TAB 4: POST & MANAGE IMPORTANT UPDATES -->
       <div id="admin-tab-updates" class="hidden grid-cols-1 lg:grid-cols-12 gap-6">
         <!-- Post Update Form (5 cols) -->
         <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm self-start">
@@ -699,46 +827,132 @@
           </div>
         </div>
       </div>
+
+      <!-- ADMIN TAB 5: SUPER-ADMIN ROLE-BASED ACCESS CONTROL (CRs & Faculty) -->
+      <div id="admin-tab-access" class="hidden grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Grant CR / Faculty Access Form (5 cols) -->
+        <div class="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm self-start">
+          <div class="flex items-center gap-2.5 mb-5">
+            <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+              <i data-lucide="user-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900">Grant CR / Faculty Upload Access</h3>
+              <p class="text-xs text-slate-500">Exclusive Super-Admin Permission Controller</p>
+            </div>
+          </div>
+
+          <form onsubmit="handleGrantRole(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Google Email Address *</label>
+              <input type="email" id="role-email" required placeholder="cr.student@gmail.com" class="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name / Designation *</label>
+              <input type="text" id="role-name" required placeholder="e.g. Rahul (ECE-A CR) or Dr. Sharma" class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Role Type *</label>
+                <select id="role-type" class="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 bg-white">
+                  <option value="cr">Class Representative (CR)</option>
+                  <option value="faculty">Faculty / Lecturer</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Assigned Branch *</label>
+                <select id="role-branch" class="w-full px-3 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 bg-white">
+                  <option value="ALL">ALL Branches</option>
+                  <option value="CSE">CSE Only</option>
+                  <option value="CSM">CSM Only</option>
+                  <option value="ECE">ECE Only</option>
+                  <option value="EEE">EEE Only</option>
+                  <option value="Mechanical">Mechanical Only</option>
+                  <option value="Civil">Civil Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Assigned Subject Scope (Use "ALL" for all subjects)</label>
+              <input type="text" id="role-subject" required value="ALL" placeholder="ALL or e.g. Engineering Chemistry" class="w-full px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <p class="text-[11px] text-slate-400 mt-1">CR & Faculty uploads enter the Super-Admin Approval Queue before becoming visible to students.</p>
+            </div>
+
+            <button type="submit" id="btn-grant-role" class="w-full bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-sm py-3 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+              <i data-lucide="shield-plus" class="w-4 h-4"></i>
+              <span>Save & Activate Role</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Active CRs & Faculty Directory (7 cols) -->
+        <div class="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h3 class="font-bold text-slate-900">Authorized CRs & Faculty Managers</h3>
+              <p class="text-xs text-slate-500">1-click instant revoke or restore access in real time</p>
+            </div>
+            <span id="admin-total-roles-badge" class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700">1 Active</span>
+          </div>
+
+          <div id="admin-roles-list" class="space-y-3 max-h-[620px] overflow-y-auto pr-1">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
   <!-- =====================================================================
-       MODAL C: PROTECTED IN-BROWSER DOCUMENT VIEWER (WATERMARKED + PDF.JS)
+       MODAL C: PROTECTED IN-BROWSER DOCUMENT VIEWER (NATIVE MOBILE CONTROLS)
   ====================================================================== -->
-  <div id="reader-modal" class="fixed inset-0 z-50 hidden flex-col bg-slate-950/90 backdrop-blur-md">
+  <div id="reader-modal" class="fixed inset-0 z-50 hidden flex-col bg-slate-950/95 backdrop-blur-md">
     <!-- Top Reader Toolbar -->
-    <div class="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between text-white shrink-0 gap-2">
-      <div class="flex items-center gap-3 min-w-0">
+    <div id="reader-top-toolbar" class="bg-slate-900/95 border-b border-slate-800 px-3 sm:px-6 py-2.5 flex items-center justify-between text-white shrink-0 gap-2 z-40">
+      <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
           <i data-lucide="shield" class="w-4 h-4"></i>
         </div>
         <div class="min-w-0">
-          <h3 id="reader-doc-title" class="text-sm font-bold truncate">Document Title</h3>
-          <p id="reader-doc-meta" class="text-[11px] text-slate-400 truncate">1st Year • CSE • Sem 1 • Protected Read-Only Mode</p>
+          <div class="flex items-center gap-2">
+            <h3 id="reader-doc-title" class="text-xs sm:text-sm font-bold truncate">Document Title</h3>
+            <span id="reader-cache-badge" class="hidden text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">0-Bandwidth Cache</span>
+          </div>
+          <p id="reader-doc-meta" class="text-[10px] sm:text-[11px] text-slate-400 truncate">1st Year • CSE • Sem 1</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-        <!-- Mobile & Desktop PDF Zoom Controls -->
-        <div id="pdf-zoom-controls" class="hidden items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl px-2 py-1">
-          <button onclick="adjustPdfZoom(-0.2)" class="px-2 py-0.5 text-xs font-bold hover:text-indigo-400 cursor-pointer">−</button>
-          <span id="pdf-zoom-level" class="text-[11px] font-mono px-1">100%</span>
-          <button onclick="adjustPdfZoom(0.2)" class="px-2 py-0.5 text-xs font-bold hover:text-indigo-400 cursor-pointer">+</button>
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <!-- Native Mobile & Desktop PDF Controls: Zoom (- / Reset / +), Rotate 90°, Full-Screen -->
+        <div id="pdf-zoom-controls" class="hidden items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl px-1.5 py-1">
+          <button onclick="adjustPdfZoom(-0.2)" title="Zoom Out" class="px-2 py-0.5 text-xs font-bold hover:text-indigo-400 cursor-pointer">−</button>
+          <button onclick="resetPdfZoom()" id="pdf-zoom-level" title="Tap to Reset Zoom" class="text-[11px] font-mono px-1 hover:text-indigo-300 cursor-pointer">100%</button>
+          <button onclick="adjustPdfZoom(0.2)" title="Zoom In" class="px-2 py-0.5 text-xs font-bold hover:text-indigo-400 cursor-pointer">+</button>
+          <span class="w-px h-3.5 bg-slate-700 mx-0.5"></span>
+          <button onclick="rotatePdf90()" title="Rotate 90°" class="p-1 hover:text-indigo-400 cursor-pointer">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+          </button>
+          <button onclick="toggleReaderFullscreen()" title="Full-Screen Mode" class="p-1 hover:text-indigo-400 cursor-pointer">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
 
-        <span class="hidden md:inline-flex items-center gap-1.5 text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+        <span class="hidden lg:inline-flex items-center gap-1.5 text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2.5 py-1 rounded-lg">
           <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-          Watermarked: <span id="reader-watermark-badge">student@kprit.ac.in</span>
+          <span id="reader-watermark-badge">student@kprit.ac.in</span>
         </span>
-        <button onclick="closeReaderModal()" class="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors cursor-pointer">
+        <button onclick="closeReaderModal()" class="inline-flex items-center gap-1 bg-slate-800 hover:bg-rose-600 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
-          <span>Close</span>
+          <span class="hidden sm:inline">Close</span>
         </button>
       </div>
     </div>
 
     <!-- Protected Document Viewport -->
-    <div id="reader-viewport" oncontextmenu="return false;" class="protected-content flex-1 overflow-y-auto p-3 sm:p-8 flex justify-center relative">
+    <div id="reader-viewport" oncontextmenu="return false;" class="protected-content flex-1 overflow-y-auto p-2 sm:p-8 flex justify-center relative">
       <!-- Privacy Curtain Warning Banner when unfocused -->
       <div id="privacy-curtain-banner" class="hidden fixed inset-0 z-40 items-center justify-center bg-slate-950/80 text-white text-center p-6 pointer-events-none">
         <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm">
@@ -749,7 +963,7 @@
       </div>
 
       <!-- Document Paper Container -->
-      <div id="reader-paper-card" class="w-full max-w-3xl bg-white text-slate-900 rounded-2xl shadow-2xl p-5 sm:p-12 relative overflow-hidden min-h-[75vh] h-fit">
+      <div id="reader-paper-card" onclick="handleReaderCardTap(event)" class="w-full max-w-4xl bg-white text-slate-900 rounded-2xl shadow-2xl p-4 sm:p-10 relative overflow-hidden min-h-[75vh] h-fit">
         <!-- Dynamic Tiled Watermark Layer -->
         <div id="reader-watermark-layer" class="watermark-grid"></div>
 
@@ -762,7 +976,7 @@
           <span id="paper-badge" class="self-start sm:self-center text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">Mid-Term Q&A</span>
         </div>
 
-        <!-- Actual Content Area (Either Formatted Q&A or Mobile-Ready PDF.js Canvas) -->
+        <!-- Actual Content Area (Either Formatted Q&A or Ordered High-DPI PDF.js Page Slots) -->
         <div id="reader-body-content" class="relative z-10 space-y-6 text-sm sm:text-base leading-relaxed text-slate-800">
           <!-- Populated dynamically -->
         </div>
@@ -772,6 +986,13 @@
           CONFIDENTIAL ACADEMIC MATERIAL • LICENSED TO <span id="paper-footer-email" class="font-bold text-slate-600"></span> • DO NOT REDISTRIBUTE
         </div>
       </div>
+    </div>
+
+    <!-- Floating Bottom Page Scrubber & Quick Jump Pill -->
+    <div id="pdf-scrubber-bar" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 border border-slate-700 text-white px-4 py-2 rounded-2xl shadow-2xl items-center gap-3 max-w-[92vw] sm:max-w-md w-full">
+      <span id="pdf-page-indicator" class="text-xs font-mono font-bold text-indigo-300 shrink-0">Page 1 / 1</span>
+      <input type="range" id="pdf-page-slider" min="1" max="1" value="1" oninput="scrubToPdfPage(this.value)" class="flex-1 accent-indigo-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg" />
+      <button onclick="toggleReaderFullscreen()" class="text-[11px] font-semibold text-slate-300 hover:text-white shrink-0 cursor-pointer">Full</button>
     </div>
   </div>
 
@@ -787,7 +1008,7 @@
   </div>
 
   <!-- =====================================================================
-       APPLICATION JAVASCRIPT (Supabase Cloud Sync, Google OAuth, PDF.js)
+       APPLICATION JAVASCRIPT (Supabase, IndexedDB, Auto-Compress, EmailJS)
   ====================================================================== -->
   <script>
     // -----------------------------------------------------------------------
@@ -795,7 +1016,10 @@
     // -----------------------------------------------------------------------
     const SUPABASE_URL = 'https://zzklpylokfhtlxhrnqqx.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_7Ik44J6c92t43JgBmLdKLQ_UQEWIpy2';
-    const ADMIN_EMAIL = 'mandugula.karthik.work@gmail.com';
+    const SUPER_ADMIN_EMAIL = 'mandugula.karthik.work@gmail.com';
+    const KPRIT_AI_REJECTION_MSG = (title) =>
+      `Your PDF '${title}' was not uploaded and was automatically rejected by KPRIT Hub AI due to violating upload quality/formatting rules. Please check the file clarity or format and try again.`;
+
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         detectSessionInUrl: true,
@@ -809,7 +1033,342 @@
     }
 
     // -----------------------------------------------------------------------
-    // 2. INITIAL SEED DATA (Only inserted when Admin logs in to empty DB)
+    // 2. CLOUD-SYNCED EMAILJS NOTIFICATION ENGINE (Works Across All CR Devices)
+    // -----------------------------------------------------------------------
+    const EMAILJS_STORAGE_KEY = 'kprit_hub_emailjs_config_v1';
+    let cloudEmailJsConfig = {
+      publicKey: '',
+      serviceId: '',
+      templateId: ''
+    };
+
+    function getEmailJsConfig() {
+      if (cloudEmailJsConfig.publicKey && cloudEmailJsConfig.serviceId && cloudEmailJsConfig.templateId) {
+        return cloudEmailJsConfig;
+      }
+      try {
+        const raw = localStorage.getItem(EMAILJS_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.publicKey) return parsed;
+        }
+      } catch {}
+      return cloudEmailJsConfig;
+    }
+
+    function loadEmailJsInputs() {
+      const cfg = getEmailJsConfig();
+      const pk = document.getElementById('ejs-public-key');
+      const sid = document.getElementById('ejs-service-id');
+      const tid = document.getElementById('ejs-template-id');
+      if (pk) pk.value = cfg.publicKey || '';
+      if (sid) sid.value = cfg.serviceId || '';
+      if (tid) tid.value = cfg.templateId || '';
+    }
+
+    async function saveEmailJsConfig(e) {
+      e.preventDefault();
+      if (!isSuperAdmin(getSession())) return;
+
+      const btn = document.getElementById('btn-save-emailjs');
+      if (btn) btn.disabled = true;
+
+      const cfg = {
+        publicKey: document.getElementById('ejs-public-key').value.trim(),
+        serviceId: document.getElementById('ejs-service-id').value.trim(),
+        templateId: document.getElementById('ejs-template-id').value.trim()
+      };
+
+      cloudEmailJsConfig = cfg;
+      localStorage.setItem(EMAILJS_STORAGE_KEY, JSON.stringify(cfg));
+
+      try {
+        const { error } = await sb.from('portal_settings').upsert({
+          id: 1,
+          emailjs_public_key: cfg.publicKey,
+          emailjs_service_id: cfg.serviceId,
+          emailjs_template_id: cfg.templateId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+        if (error) throw error;
+        showToast('EmailJS credentials saved & synced to all CR/Faculty devices!');
+      } catch (err) {
+        showToast('Saved locally (run portal_settings SQL for cloud sync): ' + err.message, 'info');
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function sendKpritHubEmail({ to_email, to_name, subject_line, message_body, doc_title, uploader_email, compression_summary }) {
+      const cfg = getEmailJsConfig();
+      if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !window.emailjs) {
+        console.info('[KPRIT Hub AI Email Notification Queued]', { to_email, subject_line, message_body });
+        return false;
+      }
+      try {
+        await emailjs.send(
+          cfg.serviceId,
+          cfg.templateId,
+          {
+            to_email,
+            to_name,
+            subject_line,
+            message_body,
+            doc_title,
+            uploader_email,
+            compression_summary: compression_summary || 'Standard Cloud Upload'
+          },
+          { publicKey: cfg.publicKey }
+        );
+        return true;
+      } catch (err) {
+        console.warn('EmailJS dispatch warning:', err);
+        return false;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. CLIENT-SIDE BROWSER PDF AUTO-COMPRESSION (With Mobile RAM Cleanup)
+    // -----------------------------------------------------------------------
+    function formatBytes(bytes) {
+      const b = Number(bytes) || 0;
+      if (b <= 0) return '0 KB';
+      if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+      return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    function calcSavedPercent(origBytes, compBytes) {
+      const o = Number(origBytes) || 0;
+      const c = Number(compBytes) || 0;
+      if (o <= 0 || c >= o) return 0;
+      return Math.round(((o - c) / o) * 100);
+    }
+
+    async function compressPdfInBrowser(file, onProgress) {
+      const originalBytes = file.size;
+      const shouldCompress = document.getElementById('up-auto-compress')?.checked !== false;
+
+      if (!shouldCompress || !window.PDFLib || !window.pdfjsLib) {
+        return {
+          fileToUpload: file,
+          originalSize: originalBytes,
+          compressedSize: originalBytes
+        };
+      }
+
+      try {
+        const arrayBuf = await file.arrayBuffer();
+        const srcPdf = await pdfjsLib.getDocument({ data: arrayBuf.slice(0) }).promise;
+        const numPages = srcPdf.numPages;
+
+        const outPdf = await PDFLib.PDFDocument.create();
+        const renderScale = 1.45; // Crisp readable ~135 DPI for mobile & desktop notes
+        const jpegQuality = 0.74;
+
+        for (let i = 1; i <= numPages; i++) {
+          if (onProgress) onProgress(`Auto-Compressing Page ${i}/${numPages}...`);
+          const page = await srcPdf.getPage(i);
+          const baseVp = page.getViewport({ scale: 1.0 });
+          const renderVp = page.getViewport({ scale: renderScale });
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = Math.floor(renderVp.width);
+          canvas.height = Math.floor(renderVp.height);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          await page.render({ canvasContext: ctx, viewport: renderVp }).promise;
+
+          const jpegDataUrl = canvas.toDataURL('image/jpeg', jpegQuality);
+          // Immediately release mobile canvas backing store memory
+          canvas.width = 0;
+          canvas.height = 0;
+          page.cleanup();
+
+          const jpgImage = await outPdf.embedJpg(jpegDataUrl);
+          const outPage = outPdf.addPage([baseVp.width, baseVp.height]);
+          outPage.drawImage(jpgImage, {
+            x: 0,
+            y: 0,
+            width: baseVp.width,
+            height: baseVp.height
+          });
+        }
+
+        const compressedUint8 = await outPdf.save({ useObjectStreams: true });
+        const compressedBytes = compressedUint8.byteLength;
+
+        if (compressedBytes < originalBytes) {
+          const compressedBlob = new Blob([compressedUint8], { type: 'application/pdf' });
+          const compressedFile = new File([compressedBlob], file.name, { type: 'application/pdf' });
+          return {
+            fileToUpload: compressedFile,
+            originalSize: originalBytes,
+            compressedSize: compressedBytes
+          };
+        }
+
+        return {
+          fileToUpload: file,
+          originalSize: originalBytes,
+          compressedSize: originalBytes
+        };
+      } catch (err) {
+        console.warn('Browser PDF compression fallback to original file:', err);
+        return {
+          fileToUpload: file,
+          originalSize: originalBytes,
+          compressedSize: originalBytes
+        };
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // 4. CLIENT-SIDE INDEXEDDB PDF CACHE (kprit_pdf_cache — 150 MB LRU)
+    // -----------------------------------------------------------------------
+    const IDB_NAME = 'kprit_pdf_cache';
+    const IDB_STORE = 'pdfs';
+    const MAX_CACHE_BYTES = 150 * 1024 * 1024;
+    const prefetchInFlight = new Map();
+
+    function openPdfCacheDB() {
+      return new Promise((resolve) => {
+        if (!window.indexedDB) return resolve(null);
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE, { keyPath: 'cacheKey' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    async function getCachedPdfBuffer(cacheKey) {
+      try {
+        const db = await openPdfCacheDB();
+        if (!db) return null;
+        return await new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          const store = tx.objectStore(IDB_STORE);
+          const getReq = store.get(cacheKey);
+          getReq.onsuccess = () => {
+            const rec = getReq.result;
+            if (rec && rec.buffer) {
+              rec.lastAccessed = Date.now();
+              store.put(rec);
+              resolve(rec.buffer);
+            } else {
+              resolve(null);
+            }
+          };
+          getReq.onerror = () => resolve(null);
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    async function setCachedPdfBuffer(cacheKey, arrayBuffer) {
+      try {
+        const db = await openPdfCacheDB();
+        if (!db || !arrayBuffer) return;
+        const sizeBytes = arrayBuffer.byteLength || 0;
+        if (sizeBytes > 45 * 1024 * 1024) return;
+
+        const allRecords = await new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, 'readonly');
+          const req = tx.objectStore(IDB_STORE).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+
+        let totalBytes = allRecords.reduce((acc, item) => acc + (item.size || 0), 0);
+        allRecords.sort((a, b) => (a.lastAccessed || 0) - (b.lastAccessed || 0));
+
+        const keysToEvict = [];
+        for (const item of allRecords) {
+          if (totalBytes + sizeBytes <= MAX_CACHE_BYTES) break;
+          keysToEvict.push(item.cacheKey);
+          totalBytes -= (item.size || 0);
+        }
+
+        await new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, 'readwrite');
+          const store = tx.objectStore(IDB_STORE);
+          keysToEvict.forEach(k => store.delete(k));
+          store.put({
+            cacheKey,
+            buffer: arrayBuffer,
+            size: sizeBytes,
+            lastAccessed: Date.now()
+          });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => resolve();
+        });
+      } catch (err) {
+        console.warn('IndexedDB cache write skipped:', err);
+      }
+    }
+
+    function getDocCacheKey(doc) {
+      return `${doc.id}::${doc.pdf_url || ''}`;
+    }
+
+    async function fetchOrCachePdfBuffer(doc) {
+      if (!doc || !doc.pdf_url) return { buffer: null, fromCache: false };
+      const cacheKey = getDocCacheKey(doc);
+
+      const cached = await getCachedPdfBuffer(cacheKey);
+      if (cached) {
+        return { buffer: cached.slice(0), fromCache: true };
+      }
+
+      if (prefetchInFlight.has(cacheKey)) {
+        const buf = await prefetchInFlight.get(cacheKey);
+        return { buffer: buf ? buf.slice(0) : null, fromCache: false };
+      }
+
+      const fetchPromise = (async () => {
+        const storagePath = extractStoragePath(doc.pdf_url);
+        let streamUrl = doc.pdf_url;
+
+        if (storagePath && !/^https?:\/\//i.test(storagePath)) {
+          const { data: signedData, error: signErr } = await sb.storage
+            .from('pdfs')
+            .createSignedUrl(storagePath, 60);
+          if (signErr) throw signErr;
+          if (signedData?.signedUrl) streamUrl = signedData.signedUrl;
+        }
+
+        const resp = await fetch(streamUrl);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} while loading PDF`);
+        const buf = await resp.arrayBuffer();
+        await setCachedPdfBuffer(cacheKey, buf.slice(0));
+        return buf;
+      })();
+
+      prefetchInFlight.set(cacheKey, fetchPromise);
+      try {
+        const finalBuf = await fetchPromise;
+        return { buffer: finalBuf ? finalBuf.slice(0) : null, fromCache: false };
+      } finally {
+        prefetchInFlight.delete(cacheKey);
+      }
+    }
+
+    function prefetchPdfOnPointerDown(resourceId) {
+      const doc = cloudResources.find(r => String(r.id) === String(resourceId));
+      if (!doc || !doc.pdf_url) return;
+      fetchOrCachePdfBuffer(doc).catch(() => {});
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. INITIAL SEED DATA
     // -----------------------------------------------------------------------
     const SEED_RESOURCES = [
       {
@@ -821,82 +1380,13 @@
         type: 'Mid-Term Q&A',
         views: 142,
         pdf_url: null,
+        status: 'approved',
+        uploader_email: SUPER_ADMIN_EMAIL,
+        uploader_name: 'Karthik Mandugula',
         raw_text: JSON.stringify([
           {
             q: 'Q1. Explain the construction and working of a Calomel Electrode with neat electrode reactions.',
             a: 'A Calomel electrode is a secondary reference electrode consisting of mercury (Hg) at the bottom, covered by a paste of mercurous chloride (Hg₂Cl₂ / calomel) and a saturated KCl solution. \n\nElectrode Representation: Pt, Hg(l) | Hg₂Cl₂(s) | KCl (sat. aq)\n\n• When acting as Anode (Oxidation): 2Hg(l) + 2Cl⁻ → Hg₂Cl₂(s) + 2e⁻\n• When acting as Cathode (Reduction): Hg₂Cl₂(s) + 2e⁻ → 2Hg(l) + 2Cl⁻\n\nAt 25°C, the standard electrode potential of a Saturated Calomel Electrode (SCE) is +0.2422 V.'
-          },
-          {
-            q: 'Q2. Differentiate between Temporary and Permanent Hardness of water. Explain EDTA complexometric titration.',
-            a: '• Temporary Hardness: Caused by dissolved bicarbonates of Calcium and Magnesium [Ca(HCO₃)₂, Mg(HCO₃)₂]. Removed simply by boiling.\n• Permanent Hardness: Caused by chlorides and sulfates of Calcium and Magnesium (CaCl₂, MgSO₄). Requires chemical treatment (Lime-Soda or Ion-Exchange).\n\nEDTA Method Principle: Ethylene Diamine Tetra Acetic Acid (EDTA) forms a stable 1:1 colorless complex with Ca²⁺ and Mg²⁺ ions at pH 9–10 (maintained using NH₄Cl–NH₄OH buffer) using Eriochrome Black-T (EBT) indicator, shifting color from wine-red to steel-blue at the endpoint.'
-          },
-          {
-            q: 'Q3. Write short notes on Nernst Equation and its applications in determining EMF of a cell.',
-            a: 'The Nernst equation relates the reduction potential of an electrochemical reaction to the standard electrode potential, temperature, and activities of the chemical species:\n\nE = E° - (0.0591 / n) log₁₀([Products] / [Reactants]) at 298 K.\n\nApplications: (1) Calculation of single electrode potential under non-standard concentrations, (2) Determining feasibility/spontaneity of a redox reaction (ΔG = -nFE), (3) Finding equilibrium constant Kc.'
-          }
-        ])
-      },
-      {
-        title: 'Arrays, Pointers & Recursion — Mid-Term Solved Paper',
-        year: '1st Year',
-        dept: 'CSE',
-        sem: 'Sem 1',
-        subject: 'Programming for Problem Solving in C',
-        type: 'Mid-Term Q&A',
-        views: 189,
-        pdf_url: null,
-        raw_text: JSON.stringify([
-          {
-            q: 'Q1. Explain Call by Value vs. Call by Reference in C with a swap example.',
-            a: '• Call by Value: Copies the actual value of an argument into the formal parameter of the function. Changes made inside the function do not affect the original variable.\n• Call by Reference: Copies the memory address (&x) of an argument into a pointer parameter (*p). Changes made inside the function directly modify the original variable in memory.\n\nvoid swap(int *a, int *b) {\n  int temp = *a;\n  *a = *b;\n  *b = temp;\n}'
-          },
-          {
-            q: 'Q2. Write a C program to multiply two matrices of order M×N and N×P.',
-            a: 'Matrix multiplication requires the number of columns of the first matrix (N) to equal the rows of the second matrix (N). Using three nested loops (i from 0 to M-1, j from 0 to P-1, k from 0 to N-1), we accumulate C[i][j] += A[i][k] * B[k][j]. Time Complexity: O(M × N × P).'
-          },
-          {
-            q: 'Q3. Compare Storage Classes in C (auto, extern, static, register).',
-            a: '1. auto: Default for local variables; stored in Stack; garbage initial value.\n2. register: Stored in CPU registers for fast access; & operator cannot be applied.\n3. static: Retains its value across multiple function calls; initialized to 0; stored in Data segment.\n4. extern: Declares a global variable defined in another file; default value 0.'
-          }
-        ])
-      },
-      {
-        title: 'Matrices, Eigenvalues & Cayley-Hamilton Theorem Notes',
-        year: '1st Year',
-        dept: 'CSE',
-        sem: 'Sem 1',
-        subject: 'Linear Algebra & Calculus',
-        type: 'Lecture Notes',
-        views: 116,
-        pdf_url: null,
-        raw_text: JSON.stringify([
-          {
-            q: 'Concept 1: Rank of a Matrix by Echelon Form',
-            a: 'Reduce the given matrix A to upper triangular (row-echelon) form using elementary row operations only. The number of non-zero rows in the echelon form equals the Rank ρ(A). For a system AX = B: if ρ(A) = ρ([A|B]) = n (number of unknowns), it has a unique solution.'
-          },
-          {
-            q: 'Concept 2: Statement & Verification of Cayley-Hamilton Theorem',
-            a: 'Statement: Every square matrix satisfies its own characteristic equation |A - λI| = 0.\n\nTo find A⁻¹: Multiply the matrix polynomial equation by A⁻¹ and isolate A⁻¹ on one side. This avoids computing cofactors and adjoint matrices for 3×3 systems.'
-          }
-        ])
-      },
-      {
-        title: 'Quantum Mechanics & Semiconductor Physics Q&A',
-        year: '1st Year',
-        dept: 'CSE',
-        sem: 'Sem 1',
-        subject: 'Applied Physics',
-        type: 'Mid-Term Q&A',
-        views: 94,
-        pdf_url: null,
-        raw_text: JSON.stringify([
-          {
-            q: 'Q1. Derive Schrödinger’s Time-Independent Wave Equation.',
-            a: 'Starting from the classical wave equation ψ = ψ₀ e^(i(kx - ωt)) and substituting de Broglie wavelength λ = h/p along with total energy E = p²/2m + V, we obtain:\n\n∇²ψ + (8π²m / h²)(E - V)ψ = 0\n\nHere |ψ|² represents the probability density of finding the particle in a given volume element.'
-          },
-          {
-            q: 'Q2. Explain Hall Effect and derive the expression for Hall Coefficient (RH).',
-            a: 'When a current-carrying conductor or semiconductor is placed in a perpendicular magnetic field, a transverse electric field (Hall voltage VH) is developed across the specimen. Hall Coefficient RH = 1 / (n·e) for n-type and +1 / (p·e) for p-type semiconductors.'
           }
         ])
       }
@@ -907,38 +1397,31 @@
         title: '1st Year B.Tech I-Mid Term Examinations Time Table',
         category: 'Mid-Term Exams',
         priority: 'Urgent',
-        target: '1st Year • All Branches (CSE, ECE, EEE, MECH, CIVIL)',
+        target: '1st Year • All Branches (CSE, CSM, ECE, EEE, MECH, CIVIL)',
         exam_date: 'Starts 26th • 10:00 AM – 11:30 AM',
-        body: '• Day 1 (26th): Linear Algebra & Calculus\n• Day 2 (27th): Engineering Chemistry / Applied Physics\n• Day 3 (28th): Programming for Problem Solving in C\n• Day 4 (29th): Basic Electrical Engineering / English\n\nNote: Students must carry their College ID Card and report 15 minutes before the exam. Curated Mid-Term Q&A sets for all subjects are live in the Study Resources tab.'
-      },
-      {
-        title: 'Semester End Examination Fee & Hall Ticket Notification',
-        category: 'Semester Exams',
-        priority: 'Schedule',
-        target: '1st, 2nd, 3rd & 4th Year • Regular & Supply',
-        exam_date: 'Last Date: Dec 05, 2026',
-        body: 'All B.Tech students are informed that the End Semester Regular/Supplementary examination registration window is open at the Exam Branch counter. Ensure 75% minimum attendance compliance before hall ticket generation.'
-      },
-      {
-        title: 'CSE Programming & Chemistry Internal Lab Viva Schedule',
-        category: 'Timetables',
-        priority: 'General',
-        target: '1st Year • CSE-A & CSE-B',
-        exam_date: 'Dec 02 – Dec 04, 2026',
-        body: '• Batch 1 (Roll 01–32): 09:30 AM – 12:30 PM (Computer Center Lab 2)\n• Batch 2 (Roll 33–64): 01:30 PM – 04:30 PM (Computer Center Lab 2)\n\nBring completed observation notebooks and certified lab records.'
+        body: '• Day 1 (26th): Linear Algebra & Calculus\n• Day 2 (27th): Engineering Chemistry / Applied Physics\n• Day 3 (28th): Programming for Problem Solving in C\n• Day 4 (29th): Basic Electrical Engineering / English'
       }
     ];
 
     // -----------------------------------------------------------------------
-    // 3. STATE & SECURITY HELPERS
+    // 6. STATE, RBAC & SECURITY HELPERS
     // -----------------------------------------------------------------------
     let cloudResources = [];
     let cloudUpdates = [];
     let cloudStudents = [];
+    let cloudRoles = [];
     let activeUserSession = null;
 
     let activePdfDoc = null;
-    let pdfScale = window.innerWidth < 640 ? 1.05 : 1.3;
+    let activeResourceId = null;
+    let currentRenderId = 0;
+    let activeRenderTasks = new Map();
+    let renderedPagesSet = new Set();
+    let pdfPageObserver = null;
+    let defaultPdfScale = window.innerWidth < 640 ? 1.05 : 1.3;
+    let pdfScale = defaultPdfScale;
+    let currentRotation = 0;
+    let lastTapTimestamp = 0;
 
     let currentFilter = {
       year: '1st Year',
@@ -983,24 +1466,60 @@
       return activeUserSession;
     }
 
-    // Extract clean storage file path from either a raw filename or a legacy public URL
+    function isSuperAdmin(session = activeUserSession) {
+      return Boolean(session && session.email === SUPER_ADMIN_EMAIL);
+    }
+
+    function isContributorOrAdmin(session = activeUserSession) {
+      return Boolean(session && ['super_admin', 'faculty', 'cr'].includes(session.role));
+    }
+
     function extractStoragePath(pdfRef) {
       if (!pdfRef) return null;
+      const trimmed = pdfRef.trim();
       const marker = '/storage/v1/object/public/pdfs/';
-      const idx = pdfRef.indexOf(marker);
+      const idx = trimmed.indexOf(marker);
       if (idx !== -1) {
-        return decodeURIComponent(pdfRef.slice(idx + marker.length));
+        return decodeURIComponent(trimmed.slice(idx + marker.length));
       }
-      return pdfRef;
+      return trimmed;
+    }
+
+    function isExternalCdnUrl(pdfRef) {
+      if (!pdfRef) return false;
+      const extracted = extractStoragePath(pdfRef);
+      return /^https?:\/\//i.test(extracted);
     }
 
     // -----------------------------------------------------------------------
-    // 4. CLOUD SYNC ENGINE (Role-Scoped Supabase Queries)
+    // 7. CLOUD SYNC ENGINE (Syncs Roles, Resources, Updates & EmailJS Config)
     // -----------------------------------------------------------------------
     async function syncFromSupabase(seedIfEmpty = true) {
       try {
         const session = getSession();
-        if (!session) return; // Never query database before authentication
+        if (!session) return;
+
+        if (session.email === SUPER_ADMIN_EMAIL) {
+          session.role = 'super_admin';
+          session.assigned_branch = 'ALL';
+          session.assigned_subject = 'ALL';
+        } else {
+          const { data: myRoleRow } = await sb
+            .from('user_roles')
+            .select('*')
+            .eq('email', session.email)
+            .maybeSingle();
+
+          if (myRoleRow && myRoleRow.is_active && ['super_admin', 'faculty', 'cr'].includes(myRoleRow.role)) {
+            session.role = myRoleRow.role;
+            session.assigned_branch = myRoleRow.assigned_branch || 'ALL';
+            session.assigned_subject = myRoleRow.assigned_subject || 'ALL';
+          } else {
+            session.role = 'student';
+            session.assigned_branch = null;
+            session.assigned_subject = null;
+          }
+        }
 
         const [resResp, updResp] = await Promise.all([
           sb.from('resources').select('*').order('created_at', { ascending: false }),
@@ -1010,12 +1529,32 @@
         if (resResp.data) cloudResources = resResp.data;
         if (updResp.data) cloudUpdates = updResp.data;
 
-        // ONLY fetch student_logs if the logged-in user is verified as Admin
-        if (session.role === 'admin') {
-          const stuResp = await sb.from('student_logs').select('*').order('last_active', { ascending: false });
-          if (stuResp.data) cloudStudents = stuResp.data;
+        // Fetch cloud-synced EmailJS config for all authorized uploaders (Super Admin, Faculty, CRs)
+        if (isContributorOrAdmin(session)) {
+          const { data: settingsRow } = await sb
+            .from('portal_settings')
+            .select('*')
+            .eq('id', 1)
+            .maybeSingle();
 
-          // Auto-seed initial KPRIT 1st-year notes & Mid-Term alerts only when Admin logs in to an empty DB
+          if (settingsRow && settingsRow.emailjs_public_key) {
+            cloudEmailJsConfig = {
+              publicKey: settingsRow.emailjs_public_key || '',
+              serviceId: settingsRow.emailjs_service_id || '',
+              templateId: settingsRow.emailjs_template_id || ''
+            };
+            localStorage.setItem(EMAILJS_STORAGE_KEY, JSON.stringify(cloudEmailJsConfig));
+          }
+        }
+
+        if (isSuperAdmin(session)) {
+          const [stuResp, rolesResp] = await Promise.all([
+            sb.from('student_logs').select('*').order('last_active', { ascending: false }),
+            sb.from('user_roles').select('*').order('created_at', { ascending: false })
+          ]);
+          if (stuResp.data) cloudStudents = stuResp.data;
+          if (rolesResp.data) cloudRoles = rolesResp.data;
+
           if (seedIfEmpty && cloudResources.length === 0 && !sessionStorage.getItem('kprit_seeded_v1')) {
             sessionStorage.setItem('kprit_seeded_v1', 'true');
             await sb.from('resources').insert(SEED_RESOURCES);
@@ -1026,9 +1565,17 @@
           }
         }
 
+        updateRoleUIHeader();
         updateUpdatesBadges();
-        if (session.role === 'admin') {
-          renderAdminDashboard();
+        updatePendingApprovalsBadge();
+        loadEmailJsInputs();
+
+        if (isContributorOrAdmin(session)) {
+          if (isSuperAdmin(session)) {
+            renderAdminDashboard();
+            renderAdminApprovalsQueue();
+            renderAdminRolesManager();
+          }
           renderAdminResourceManager();
           renderAdminUpdatesManager();
         }
@@ -1039,8 +1586,16 @@
       }
     }
 
+    function updatePendingApprovalsBadge() {
+      const pendingCount = cloudResources.filter(r => r.status === 'pending').length;
+      const badge = document.getElementById('pending-approvals-badge');
+      const queueBadge = document.getElementById('approvals-queue-count-badge');
+      if (badge) badge.textContent = pendingCount;
+      if (queueBadge) queueBadge.textContent = `${pendingCount} Pending`;
+    }
+
     // -----------------------------------------------------------------------
-    // 5. TOAST NOTIFICATIONS
+    // 8. TOAST NOTIFICATIONS
     // -----------------------------------------------------------------------
     function showToast(message, type = 'success') {
       const container = document.getElementById('toast-container');
@@ -1065,11 +1620,11 @@
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(8px)';
         setTimeout(() => toast.remove(), 300);
-      }, 3200);
+      }, 3600);
     }
 
     // -----------------------------------------------------------------------
-    // 6. GOOGLE OAUTH AUTHENTICATION FLOW (Single Lifecycle Listener)
+    // 9. GOOGLE OAUTH AUTHENTICATION FLOW
     // -----------------------------------------------------------------------
     async function signInWithGoogle() {
       const btn = document.getElementById('btn-google-login');
@@ -1086,32 +1641,34 @@
       }
     }
 
-    function applyGoogleSession(session) {
+    async function applyGoogleSession(session) {
       if (session && session.user) {
         const meta = session.user.user_metadata || {};
         const name = meta.full_name || meta.name || session.user.email.split('@')[0];
         const email = session.user.email.toLowerCase();
 
         activeUserSession = {
-          role: email === ADMIN_EMAIL ? 'admin' : 'student',
+          role: email === SUPER_ADMIN_EMAIL ? 'super_admin' : 'student',
           name,
-          email
+          email,
+          assigned_branch: email === SUPER_ADMIN_EMAIL ? 'ALL' : null,
+          assigned_subject: email === SUPER_ADMIN_EMAIL ? 'ALL' : null
         };
 
         renderApp();
-        syncFromSupabase(true);
+        await syncFromSupabase(true);
 
-        if (activeUserSession.role === 'student') {
+        if (!isSuperAdmin(activeUserSession)) {
           recordStudentActivity(name, email, null);
         }
       } else {
         activeUserSession = null;
         cloudStudents = [];
+        cloudRoles = [];
         renderApp();
       }
     }
 
-    // Single authoritative auth listener (ignores TOKEN_REFRESHED so active view/tab never resets)
     sb.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') return;
       applyGoogleSession(session);
@@ -1132,6 +1689,7 @@
     async function logout() {
       activeUserSession = null;
       cloudStudents = [];
+      cloudRoles = [];
       await sb.auth.signOut();
       showToast('Logged out successfully', 'info');
       renderApp();
@@ -1160,8 +1718,84 @@
     }
 
     // -----------------------------------------------------------------------
-    // 7. MAIN VIEW ROUTER
+    // 10. MAIN VIEW ROUTER & RBAC UI CONTROLLER
     // -----------------------------------------------------------------------
+    function updateRoleUIHeader() {
+      const session = getSession();
+      if (!session) return;
+
+      const roleBadge = document.getElementById('role-badge');
+      const adminSwitch = document.getElementById('admin-nav-switch');
+      const studentNavTabs = document.getElementById('student-nav-tabs');
+      const studentMobTabs = document.getElementById('student-mobile-tabs');
+      const tabBtnAnalytics = document.getElementById('tab-btn-analytics');
+      const tabBtnApprovals = document.getElementById('tab-btn-approvals');
+      const tabBtnAccess = document.getElementById('tab-btn-access');
+      const navBtnAdmin = document.getElementById('nav-btn-admin');
+      const scopeHint = document.getElementById('upload-scope-hint');
+      const publishBtnText = document.querySelector('#btn-publish-resource span');
+
+      if (isSuperAdmin(session)) {
+        roleBadge.textContent = 'Super Admin';
+        roleBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shrink-0';
+        adminSwitch.classList.remove('hidden');
+        adminSwitch.classList.add('inline-flex');
+        navBtnAdmin.textContent = 'Admin Panel';
+        tabBtnAnalytics.classList.remove('hidden');
+        tabBtnAnalytics.classList.add('flex');
+        tabBtnApprovals.classList.remove('hidden');
+        tabBtnApprovals.classList.add('flex');
+        tabBtnAccess.classList.remove('hidden');
+        tabBtnAccess.classList.add('flex');
+        scopeHint.textContent = 'Super Admin • Instant Live Publish';
+        if (publishBtnText) publishBtnText.textContent = 'Publish Live to Student Portal';
+        document.getElementById('up-dept').disabled = false;
+        document.getElementById('up-subject').readOnly = false;
+      } else if (session.role === 'faculty' || session.role === 'cr') {
+        const label = session.role === 'faculty' ? 'Faculty' : 'CR Manager';
+        roleBadge.textContent = label;
+        roleBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0';
+        adminSwitch.classList.remove('hidden');
+        adminSwitch.classList.add('inline-flex');
+        navBtnAdmin.textContent = `${label} Upload`;
+        tabBtnAnalytics.classList.add('hidden');
+        tabBtnAnalytics.classList.remove('flex');
+        tabBtnApprovals.classList.add('hidden');
+        tabBtnApprovals.classList.remove('flex');
+        tabBtnAccess.classList.add('hidden');
+        tabBtnAccess.classList.remove('flex');
+
+        const bScope = session.assigned_branch || 'ALL';
+        const sScope = session.assigned_subject || 'ALL';
+        scopeHint.textContent = `Scope: Branch ${bScope} • Subject ${sScope} (Queued for Super-Admin Verification)`;
+        if (publishBtnText) publishBtnText.textContent = 'Submit PDF for Super-Admin Approval';
+
+        const deptSelect = document.getElementById('up-dept');
+        if (bScope !== 'ALL') {
+          deptSelect.value = bScope;
+          deptSelect.disabled = true;
+        } else {
+          deptSelect.disabled = false;
+        }
+        const subInput = document.getElementById('up-subject');
+        if (sScope !== 'ALL') {
+          subInput.value = sScope;
+          subInput.readOnly = true;
+        } else {
+          subInput.readOnly = false;
+        }
+      } else {
+        roleBadge.textContent = 'Student';
+        roleBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 shrink-0';
+        adminSwitch.classList.add('hidden');
+        adminSwitch.classList.remove('inline-flex');
+        studentNavTabs.classList.add('hidden', 'sm:flex');
+        studentMobTabs.classList.remove('hidden');
+        document.getElementById('admin-command-section').classList.add('hidden');
+        document.getElementById('student-portal-section').classList.remove('hidden');
+      }
+    }
+
     function renderApp() {
       const session = getSession();
       const authView = document.getElementById('auth-view');
@@ -1184,31 +1818,14 @@
       document.getElementById('user-avatar').textContent = session.name.charAt(0).toUpperCase();
       document.getElementById('banner-student-name').textContent = session.name.split(' ')[0];
 
-      const roleBadge = document.getElementById('role-badge');
-      const adminSwitch = document.getElementById('admin-nav-switch');
-      const studentNavTabs = document.getElementById('student-nav-tabs');
-      const studentMobTabs = document.getElementById('student-mobile-tabs');
-
+      updateRoleUIHeader();
       updateUpdatesBadges();
+      updatePendingApprovalsBadge();
+      loadEmailJsInputs();
 
-      if (session.role === 'admin') {
-        roleBadge.textContent = 'Admin';
-        roleBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
-        adminSwitch.classList.remove('hidden');
-        adminSwitch.classList.add('inline-flex');
-        studentNavTabs.classList.add('hidden');
-        studentNavTabs.classList.remove('sm:flex');
-        studentMobTabs.classList.add('hidden');
+      if (isSuperAdmin(session)) {
         switchAdminView('dashboard');
       } else {
-        roleBadge.textContent = 'Student';
-        roleBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700';
-        adminSwitch.classList.add('hidden');
-        adminSwitch.classList.remove('inline-flex');
-        studentNavTabs.classList.add('hidden', 'sm:flex');
-        studentMobTabs.classList.remove('hidden');
-        document.getElementById('admin-command-section').classList.add('hidden');
-        document.getElementById('student-portal-section').classList.remove('hidden');
         switchStudentTab('resources');
         renderStudentResources();
       }
@@ -1321,7 +1938,7 @@
             <div class="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
               <span>Posted on ${formatDateLabel(u.created_at)}</span>
               <span class="font-semibold text-emerald-600 flex items-center gap-1">
-                <i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Verified Admin Notice
+                <i data-lucide="badge-check" class="w-3.5 h-3.5"></i> Verified Notice
               </span>
             </div>
           </div>
@@ -1332,7 +1949,7 @@
     }
 
     // -----------------------------------------------------------------------
-    // 8. STUDENT PORTAL LOGIC & FILTERING
+    // 11. STUDENT PORTAL LOGIC (Strictly Shows Only status === 'approved')
     // -----------------------------------------------------------------------
     function setFilter(key, value) {
       currentFilter[key] = value;
@@ -1355,7 +1972,9 @@
       const searchEl = document.getElementById('student-search-input');
       const searchQuery = (searchEl ? searchEl.value : '').toLowerCase();
 
-      const branchFiltered = cloudResources.filter(r =>
+      const approvedResources = cloudResources.filter(r => (r.status || 'approved') === 'approved');
+
+      const branchFiltered = approvedResources.filter(r =>
         r.year === currentFilter.year &&
         r.dept === currentFilter.dept &&
         r.sem === currentFilter.sem
@@ -1405,7 +2024,7 @@
             </div>
             <h3 class="font-bold text-slate-800 text-base">No notes uploaded for this filter yet</h3>
             <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-              Switch to <strong>1st Year → CSE → Sem 1</strong> to explore the live Mid-Term Q&A sets, or check back soon as new notes are published.
+              Switch to <strong>1st Year → CSE → Sem 1</strong> to explore live Mid-Term Q&A sets, or check back soon as CRs & Faculty publish new notes.
             </p>
           </div>
         `;
@@ -1420,16 +2039,24 @@
             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
             : 'bg-amber-50 text-amber-700 border-amber-200');
 
+        const savedPage = localStorage.getItem(`lastPage_${item.id}`);
+        const resumeHint = savedPage && Number(savedPage) > 1
+          ? `<span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">Resume p.${escapeHTML(savedPage)}</span>`
+          : '';
+
         return `
-          <div class="group bg-white rounded-3xl border border-slate-200 hover:border-indigo-300 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+          <div onpointerdown="prefetchPdfOnPointerDown('${item.id}')" class="group bg-white rounded-3xl border border-slate-200 hover:border-indigo-300 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between gap-2 mb-3">
                 <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border ${badgeStyle}">
                   ${escapeHTML(item.type)}
                 </span>
-                <span class="text-[11px] text-slate-400 flex items-center gap-1">
-                  <i data-lucide="eye" class="w-3.5 h-3.5"></i> ${item.views || 0} reads
-                </span>
+                <div class="flex items-center gap-1.5">
+                  ${resumeHint}
+                  <span class="text-[11px] text-slate-400 flex items-center gap-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> ${item.views || 0} reads
+                  </span>
+                </div>
               </div>
 
               <p class="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-1">${escapeHTML(item.subject)}</p>
@@ -1453,8 +2080,23 @@
     }
 
     // -----------------------------------------------------------------------
-    // 9. PROTECTED IN-BROWSER DOCUMENT VIEWER (SIGNED URLS + WATERMARKED PDF.JS)
+    // 12. PROTECTED PDF.JS READER (CONCURRENCY-SAFE + LAZY OBSERVER + CACHE)
     // -----------------------------------------------------------------------
+    function cancelAllActivePdfRenders() {
+      currentRenderId++;
+      if (pdfPageObserver) {
+        pdfPageObserver.disconnect();
+        pdfPageObserver = null;
+      }
+      activeRenderTasks.forEach((task) => {
+        try {
+          task.cancel();
+        } catch {}
+      });
+      activeRenderTasks.clear();
+      renderedPagesSet.clear();
+    }
+
     async function openProtectedReader(resourceId) {
       const doc = cloudResources.find(r => String(r.id) === String(resourceId));
       if (!doc) return;
@@ -1462,11 +2104,18 @@
       const session = getSession();
       if (!session) return;
 
-      // Increment view count safely via PostgreSQL SECURITY DEFINER RPC function
-      doc.views = (doc.views || 0) + 1;
-      sb.rpc('increment_views', { row_id: doc.id }).then(() => {});
+      cancelAllActivePdfRenders();
+      activeResourceId = String(doc.id);
+      defaultPdfScale = window.innerWidth < 640 ? 1.05 : 1.3;
+      pdfScale = defaultPdfScale;
+      currentRotation = 0;
 
-      if (session.role === 'student') {
+      if ((doc.status || 'approved') === 'approved') {
+        doc.views = (doc.views || 0) + 1;
+        sb.rpc('increment_views', { row_id: doc.id }).then(() => {});
+      }
+
+      if (!isSuperAdmin(session)) {
         recordStudentActivity(session.name, session.email, doc.title);
       }
 
@@ -1477,7 +2126,9 @@
       document.getElementById('paper-badge').textContent = doc.type;
       document.getElementById('paper-footer-email').textContent = session.email;
 
-      // Generate Dynamic Tiled Watermark Grid
+      const cacheBadge = document.getElementById('reader-cache-badge');
+      cacheBadge.classList.add('hidden');
+
       const wmLayer = document.getElementById('reader-watermark-layer');
       const timestampStamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const wmText = `${session.name} (${session.email}) • ${timestampStamp}`;
@@ -1485,40 +2136,54 @@
 
       const bodyContainer = document.getElementById('reader-body-content');
       const zoomControls = document.getElementById('pdf-zoom-controls');
+      const scrubberBar = document.getElementById('pdf-scrubber-bar');
       activePdfDoc = null;
 
       const modal = document.getElementById('reader-modal');
-      modal.classList.remove('hidden');
+      modal.classList.remove('hidden', 'controls-hidden');
       modal.classList.add('flex');
       lucide.createIcons();
 
       if (doc.pdf_url && window.pdfjsLib) {
+        const myRenderId = currentRenderId;
         zoomControls.classList.remove('hidden');
         zoomControls.classList.add('flex');
+
         bodyContainer.innerHTML = `
           <div id="pdf-loading-msg" class="text-center py-12 text-xs font-semibold text-indigo-600">
-            Generating 60-second encrypted stream & rendering pages...
+            Loading protected PDF stream...
           </div>
           <div id="pdf-canvas-wrapper" class="flex flex-col items-center gap-4"></div>
         `;
-        try {
-          const storagePath = extractStoragePath(doc.pdf_url);
-          let streamUrl = doc.pdf_url;
 
-          if (storagePath && !storagePath.startsWith('http')) {
-            const { data: signedData, error: signErr } = await sb.storage
-              .from('pdfs')
-              .createSignedUrl(storagePath, 60);
-            if (!signErr && signedData?.signedUrl) {
-              streamUrl = signedData.signedUrl;
-            }
+        try {
+          const { buffer, fromCache } = await fetchOrCachePdfBuffer(doc);
+          if (myRenderId !== currentRenderId) return;
+
+          if (fromCache) {
+            cacheBadge.textContent = 'Instant Cache (0 MB Egress)';
+            cacheBadge.classList.remove('hidden');
           }
 
-          activePdfDoc = await pdfjsLib.getDocument(streamUrl).promise;
+          activePdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+          if (myRenderId !== currentRenderId) return;
+
           const msg = document.getElementById('pdf-loading-msg');
           if (msg) msg.remove();
-          await renderPdfCanvases();
+
+          await setupOrderedPdfSlotsAndLazyRender(myRenderId);
+
+          const savedPage = parseInt(localStorage.getItem(`lastPage_${doc.id}`) || '1', 10);
+          if (savedPage > 1 && savedPage <= activePdfDoc.numPages) {
+            setTimeout(() => {
+              if (myRenderId === currentRenderId) {
+                scrubToPdfPage(savedPage, true);
+                showToast(`Resumed at Page ${savedPage} of ${activePdfDoc.numPages}`, 'info');
+              }
+            }, 120);
+          }
         } catch (err) {
+          if (myRenderId !== currentRenderId) return;
           bodyContainer.innerHTML = `
             <div class="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
               Could not render inline PDF preview (${escapeHTML(err.message)}).
@@ -1528,6 +2193,8 @@
       } else {
         zoomControls.classList.add('hidden');
         zoomControls.classList.remove('flex');
+        scrubberBar.classList.add('hidden');
+        scrubberBar.classList.remove('flex');
 
         let parsedBlocks = null;
         if (doc.raw_text) {
@@ -1553,52 +2220,232 @@
         }
       }
 
-      if (session.role === 'student') {
-        renderStudentResources();
-      } else {
+      if (isSuperAdmin(session)) {
         renderAdminDashboard();
       }
+      renderStudentResources();
     }
 
-    async function renderPdfCanvases() {
-      if (!activePdfDoc) return;
+    async function setupOrderedPdfSlotsAndLazyRender(renderId) {
+      if (!activePdfDoc || renderId !== currentRenderId) return;
       const wrapper = document.getElementById('pdf-canvas-wrapper');
       if (!wrapper) return;
-      wrapper.innerHTML = '';
-      document.getElementById('pdf-zoom-level').textContent = Math.round(pdfScale * 100) + '%';
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      for (let num = 1; num <= activePdfDoc.numPages; num++) {
-        const page = await activePdfDoc.getPage(num);
-        const viewport = page.getViewport({ scale: pdfScale });
+      wrapper.innerHTML = '';
+      document.getElementById('pdf-zoom-level').textContent = Math.round((pdfScale / defaultPdfScale) * 100) + '%';
+
+      const numPages = activePdfDoc.numPages;
+      const scrubberBar = document.getElementById('pdf-scrubber-bar');
+      const slider = document.getElementById('pdf-page-slider');
+      const indicator = document.getElementById('pdf-page-indicator');
+
+      if (numPages > 1) {
+        scrubberBar.classList.remove('hidden');
+        scrubberBar.classList.add('flex');
+        slider.max = String(numPages);
+        slider.value = '1';
+        indicator.textContent = `Page 1 / ${numPages}`;
+      } else {
+        scrubberBar.classList.add('hidden');
+        scrubberBar.classList.remove('flex');
+      }
+
+      const firstPage = await activePdfDoc.getPage(1);
+      if (renderId !== currentRenderId) return;
+      const firstViewport = firstPage.getViewport({ scale: pdfScale, rotation: currentRotation });
+      const defaultW = Math.floor(firstViewport.width);
+      const defaultH = Math.floor(firstViewport.height);
+
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const slot = document.createElement('div');
+        slot.className = 'pdf-page-slot';
+        slot.dataset.page = String(pageNum);
+        slot.id = `pdf-page-slot-${pageNum}`;
+        slot.style.width = `${defaultW}px`;
+        slot.style.minHeight = `${defaultH}px`;
+        slot.innerHTML = `<span class="text-xs font-mono text-slate-400">Page ${pageNum} of ${numPages}...</span>`;
+        wrapper.appendChild(slot);
+      }
+
+      await renderSinglePdfPageSlot(1, renderId);
+      if (numPages >= 2 && renderId === currentRenderId) {
+        renderSinglePdfPageSlot(2, renderId);
+      }
+
+      if (renderId !== currentRenderId) return;
+
+      const viewportEl = document.getElementById('reader-viewport');
+      pdfPageObserver = new IntersectionObserver((entries) => {
+        if (renderId !== currentRenderId) return;
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const pNum = parseInt(entry.target.dataset.page, 10);
+          if (!pNum) return;
+
+          if (!renderedPagesSet.has(pNum)) {
+            renderSinglePdfPageSlot(pNum, renderId);
+          }
+
+          if (activeResourceId && activePdfDoc) {
+            document.getElementById('pdf-page-indicator').textContent = `Page ${pNum} / ${activePdfDoc.numPages}`;
+            document.getElementById('pdf-page-slider').value = String(pNum);
+            localStorage.setItem(`lastPage_${activeResourceId}`, String(pNum));
+          }
+        });
+      }, {
+        root: viewportEl,
+        rootMargin: '400px 0px',
+        threshold: 0.15
+      });
+
+      wrapper.querySelectorAll('.pdf-page-slot').forEach(slot => pdfPageObserver.observe(slot));
+    }
+
+    async function renderSinglePdfPageSlot(pageNum, renderId) {
+      if (!activePdfDoc || renderId !== currentRenderId || renderedPagesSet.has(pageNum)) return;
+      renderedPagesSet.add(pageNum);
+
+      try {
+        const page = await activePdfDoc.getPage(pageNum);
+        if (renderId !== currentRenderId) return;
+
+        const viewport = page.getViewport({ scale: pdfScale, rotation: currentRotation });
+        const slot = document.getElementById(`pdf-page-slot-${pageNum}`);
+        if (!slot) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
-        canvas.style.width = Math.floor(viewport.width) + 'px';
-        canvas.style.height = Math.floor(viewport.height) + 'px';
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        slot.style.width = `${Math.floor(viewport.width)}px`;
+        slot.style.minHeight = `${Math.floor(viewport.height)}px`;
 
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        wrapper.appendChild(canvas);
-        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const renderTask = page.render({ canvasContext: ctx, viewport });
+        activeRenderTasks.set(pageNum, renderTask);
+
+        await renderTask.promise;
+        activeRenderTasks.delete(pageNum);
+
+        if (renderId !== currentRenderId) return;
+        slot.innerHTML = '';
+        slot.appendChild(canvas);
+      } catch (err) {
+        activeRenderTasks.delete(pageNum);
+        if (err && err.name === 'RenderingCancelledException') return;
+        renderedPagesSet.delete(pageNum);
       }
     }
 
     function adjustPdfZoom(delta) {
       if (!activePdfDoc) return;
-      pdfScale = Math.min(2.2, Math.max(0.7, +(pdfScale + delta).toFixed(2)));
-      renderPdfCanvases();
+      const currentPage = parseInt(document.getElementById('pdf-page-slider').value || '1', 10);
+      cancelAllActivePdfRenders();
+      pdfScale = Math.min(2.6, Math.max(0.65, +(pdfScale + delta).toFixed(2)));
+      const myRenderId = currentRenderId;
+      setupOrderedPdfSlotsAndLazyRender(myRenderId).then(() => {
+        if (currentPage > 1 && myRenderId === currentRenderId) {
+          scrubToPdfPage(currentPage, true);
+        }
+      });
+    }
+
+    function resetPdfZoom() {
+      if (!activePdfDoc) return;
+      const currentPage = parseInt(document.getElementById('pdf-page-slider').value || '1', 10);
+      cancelAllActivePdfRenders();
+      pdfScale = defaultPdfScale;
+      const myRenderId = currentRenderId;
+      setupOrderedPdfSlotsAndLazyRender(myRenderId).then(() => {
+        if (currentPage > 1 && myRenderId === currentRenderId) {
+          scrubToPdfPage(currentPage, true);
+        }
+      });
+    }
+
+    function rotatePdf90() {
+      if (!activePdfDoc) return;
+      const currentPage = parseInt(document.getElementById('pdf-page-slider').value || '1', 10);
+      cancelAllActivePdfRenders();
+      currentRotation = (currentRotation + 90) % 360;
+      const myRenderId = currentRenderId;
+      setupOrderedPdfSlotsAndLazyRender(myRenderId).then(() => {
+        if (currentPage > 1 && myRenderId === currentRenderId) {
+          scrubToPdfPage(currentPage, true);
+        }
+      });
+    }
+
+    function scrubToPdfPage(pageNum, instant = false) {
+      if (!activePdfDoc) return;
+      const targetNum = Math.min(activePdfDoc.numPages, Math.max(1, parseInt(pageNum, 10) || 1));
+      document.getElementById('pdf-page-indicator').textContent = `Page ${targetNum} / ${activePdfDoc.numPages}`;
+      document.getElementById('pdf-page-slider').value = String(targetNum);
+
+      const slot = document.getElementById(`pdf-page-slot-${targetNum}`);
+      if (slot) {
+        slot.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'start' });
+        renderSinglePdfPageSlot(targetNum, currentRenderId);
+      }
+      if (activeResourceId) {
+        localStorage.setItem(`lastPage_${activeResourceId}`, String(targetNum));
+      }
+    }
+
+    function toggleReaderFullscreen() {
+      const modal = document.getElementById('reader-modal');
+      const isFs = modal.classList.toggle('reader-fullscreen');
+      if (isFs) {
+        if (modal.requestFullscreen) {
+          modal.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+        modal.classList.remove('controls-hidden');
+      }
+    }
+
+    function handleReaderCardTap(e) {
+      if (!activePdfDoc) return;
+      const now = Date.now();
+      if (now - lastTapTimestamp < 280) {
+        lastTapTimestamp = 0;
+        if (Math.abs(pdfScale - defaultPdfScale) < 0.1) {
+          adjustPdfZoom(0.45);
+        } else {
+          resetPdfZoom();
+        }
+        return;
+      }
+      lastTapTimestamp = now;
+
+      const modal = document.getElementById('reader-modal');
+      if (modal.classList.contains('reader-fullscreen') || document.fullscreenElement) {
+        modal.classList.toggle('controls-hidden');
+      }
     }
 
     function closeReaderModal() {
+      cancelAllActivePdfRenders();
       const modal = document.getElementById('reader-modal');
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
       modal.classList.add('hidden');
-      modal.classList.remove('flex');
+      modal.classList.remove('flex', 'reader-fullscreen', 'controls-hidden');
+      document.getElementById('pdf-scrubber-bar').classList.add('hidden');
+      document.getElementById('pdf-scrubber-bar').classList.remove('flex');
       activePdfDoc = null;
+      activeResourceId = null;
     }
 
-    // Block Ctrl+S / Ctrl+P / Ctrl+C shortcuts while reader is open
     document.addEventListener('keydown', function (e) {
       const readerOpen = !document.getElementById('reader-modal').classList.contains('hidden');
       if (!readerOpen) return;
@@ -1608,7 +2455,6 @@
       }
     });
 
-    // Blur document immediately if user switches tab/window or opens snipping tool
     window.addEventListener('blur', function () {
       const readerOpen = !document.getElementById('reader-modal').classList.contains('hidden');
       if (readerOpen) {
@@ -1627,9 +2473,10 @@
     });
 
     // -----------------------------------------------------------------------
-    // 10. ADMIN COMMAND CENTER (Analytics, Cloud Uploads, CSV Export)
+    // 13. ADMIN & RBAC COMMAND CENTER + SUPER-ADMIN APPROVAL QUEUE
     // -----------------------------------------------------------------------
     function switchAdminView(mode) {
+      const session = getSession();
       const adminSection = document.getElementById('admin-command-section');
       const studentSection = document.getElementById('student-portal-section');
       const btnAdmin = document.getElementById('nav-btn-admin');
@@ -1642,9 +2489,12 @@
         studentMobTabs.classList.add('hidden');
         btnAdmin.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer';
         btnPreview.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
-        renderAdminDashboard();
-        renderAdminResourceManager();
-        renderAdminUpdatesManager();
+
+        if (isSuperAdmin(session)) {
+          switchAdminTab('analytics');
+        } else {
+          switchAdminTab('resources');
+        }
       } else {
         adminSection.classList.add('hidden');
         studentSection.classList.remove('hidden');
@@ -1657,23 +2507,40 @@
     }
 
     function switchAdminTab(tab) {
+      const session = getSession();
+      if ((tab === 'analytics' || tab === 'approvals' || tab === 'access') && !isSuperAdmin(session)) {
+        tab = 'resources';
+      }
+
       const analyticsTab = document.getElementById('admin-tab-analytics');
+      const approvalsTab = document.getElementById('admin-tab-approvals');
       const resourcesTab = document.getElementById('admin-tab-resources');
       const updatesTab = document.getElementById('admin-tab-updates');
+      const accessTab = document.getElementById('admin-tab-access');
+
       const btnAnalytics = document.getElementById('tab-btn-analytics');
+      const btnApprovals = document.getElementById('tab-btn-approvals');
       const btnResources = document.getElementById('tab-btn-resources');
       const btnUpdates = document.getElementById('tab-btn-updates');
+      const btnAccess = document.getElementById('tab-btn-access');
 
       const activeClass = 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-indigo-600 shadow-sm transition-all cursor-pointer';
       const inactiveClass = 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
 
       analyticsTab.classList.add('hidden');
+      approvalsTab.classList.add('hidden');
       resourcesTab.classList.add('hidden');
       resourcesTab.classList.remove('grid');
       updatesTab.classList.add('hidden');
       updatesTab.classList.remove('grid');
+      accessTab.classList.add('hidden');
+      accessTab.classList.remove('grid');
 
-      btnAnalytics.className = inactiveClass;
+      if (isSuperAdmin(session)) {
+        btnAnalytics.className = inactiveClass;
+        btnApprovals.className = inactiveClass;
+        btnAccess.className = inactiveClass;
+      }
       btnResources.className = inactiveClass;
       btnUpdates.className = inactiveClass;
 
@@ -1681,25 +2548,309 @@
         analyticsTab.classList.remove('hidden');
         btnAnalytics.className = activeClass;
         renderAdminDashboard();
+      } else if (tab === 'approvals' && isSuperAdmin(session)) {
+        approvalsTab.classList.remove('hidden');
+        btnApprovals.className = activeClass;
+        renderAdminApprovalsQueue();
       } else if (tab === 'resources') {
         resourcesTab.classList.remove('hidden');
         resourcesTab.classList.add('grid');
         btnResources.className = activeClass;
         renderAdminResourceManager();
-      } else {
+      } else if (tab === 'updates') {
         updatesTab.classList.remove('hidden');
         updatesTab.classList.add('grid');
         btnUpdates.className = activeClass;
         renderAdminUpdatesManager();
+      } else if (tab === 'access' && isSuperAdmin(session)) {
+        accessTab.classList.remove('hidden');
+        accessTab.classList.add('grid');
+        btnAccess.className = activeClass;
+        renderAdminRolesManager();
       }
+      lucide.createIcons();
+    }
+
+    function renderAdminApprovalsQueue() {
+      if (!isSuperAdmin(getSession())) return;
+      updatePendingApprovalsBadge();
+      loadEmailJsInputs();
+
+      const pendingItems = cloudResources.filter(r => r.status === 'pending');
+      const container = document.getElementById('admin-pending-approvals-list');
+
+      if (pendingItems.length === 0) {
+        container.innerHTML = `
+          <div class="p-10 rounded-3xl border border-dashed border-slate-200 text-center bg-slate-50/50">
+            <i data-lucide="check-circle-2" class="w-10 h-10 text-emerald-500 mx-auto mb-2"></i>
+            <p class="font-bold text-slate-800 text-sm">All caught up! Zero pending uploads in queue.</p>
+            <p class="text-xs text-slate-500 mt-1">New PDF uploads from CRs and Faculty will appear here with compression telemetry for your 1-click verification.</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = pendingItems.map(item => {
+        const origSize = formatBytes(item.original_size_bytes);
+        const compSize = formatBytes(item.compressed_size_bytes);
+        const savedPct = calcSavedPercent(item.original_size_bytes, item.compressed_size_bytes);
+
+        return `
+          <div class="p-5 rounded-3xl border border-amber-200 bg-amber-50/40 flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  <span class="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-300">Pending Verification</span>
+                  <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">${escapeHTML(item.year)} • ${escapeHTML(item.dept)} • ${escapeHTML(item.sem)}</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">${escapeHTML(item.type)}</span>
+                </div>
+                <h4 class="font-bold text-base text-slate-900">${escapeHTML(item.title)}</h4>
+                <p class="text-xs font-semibold text-indigo-600 mt-0.5">${escapeHTML(item.subject)}</p>
+                <p class="text-xs text-slate-600 mt-1 flex items-center gap-1.5 font-mono">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                  Uploader: <strong>${escapeHTML(item.uploader_name || 'Contributor')}</strong> (${escapeHTML(item.uploader_email || 'unknown')})
+                </p>
+              </div>
+
+              <!-- Compression Telemetry Pill -->
+              <div class="bg-white border border-slate-200 rounded-2xl p-3 text-right shrink-0">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Auto-Compression Telemetry</p>
+                <p class="text-xs font-mono text-slate-700 mt-1">
+                  Orig: <strong>${origSize}</strong> → Comp: <strong class="text-indigo-600">${compSize}</strong>
+                </p>
+                <span class="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${savedPct > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">
+                  ${savedPct > 0 ? `${savedPct}% Storage Saved` : 'Already Optimal'}
+                </span>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-amber-200/70 flex flex-wrap items-center justify-between gap-2">
+              <button onclick="openProtectedReader('${item.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-300 hover:border-indigo-500 text-slate-800 transition-colors cursor-pointer">
+                <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-600"></i>
+                Preview PDF
+              </button>
+
+              <div class="flex items-center gap-2">
+                <button onclick="rejectPendingResource('${item.id}')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition-colors cursor-pointer">
+                  <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                  Reject (KPRIT Hub AI)
+                </button>
+                <button onclick="approvePendingResource('${item.id}')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors cursor-pointer">
+                  <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                  Approve & Publish Live
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    async function approvePendingResource(resourceId) {
+      if (!isSuperAdmin(getSession())) return;
+      const target = cloudResources.find(r => String(r.id) === String(resourceId));
+      if (!target) return;
+
+      const { error } = await sb
+        .from('resources')
+        .update({ status: 'approved', rejection_reason: null })
+        .eq('id', target.id);
+
+      if (error) {
+        showToast('Approval failed: ' + error.message, 'error');
+        return;
+      }
+
+      const approvalMsg = `Your PDF '${target.title}' has been verified and successfully uploaded to KPRIT Resource Hub.`;
+      await sendKpritHubEmail({
+        to_email: target.uploader_email,
+        to_name: target.uploader_name || 'KPRIT Contributor',
+        subject_line: `Approved & Live: ${target.title} | KPRIT Resource Hub`,
+        message_body: approvalMsg,
+        doc_title: target.title,
+        uploader_email: target.uploader_email,
+        compression_summary: `${formatBytes(target.original_size_bytes)} -> ${formatBytes(target.compressed_size_bytes)}`
+      });
+
+      showToast(`Approved "${target.title}" & notified ${target.uploader_email}!`);
+      await syncFromSupabase(false);
+    }
+
+    async function rejectPendingResource(resourceId) {
+      if (!isSuperAdmin(getSession())) return;
+      const target = cloudResources.find(r => String(r.id) === String(resourceId));
+      if (!target) return;
+
+      if (target.pdf_url && !isExternalCdnUrl(target.pdf_url)) {
+        const storagePath = extractStoragePath(target.pdf_url);
+        if (storagePath && !/^https?:\/\//i.test(storagePath)) {
+          await sb.storage.from('pdfs').remove([storagePath]);
+        }
+      }
+
+      const aiModerationMessage = KPRIT_AI_REJECTION_MSG(target.title);
+
+      const { error } = await sb
+        .from('resources')
+        .update({
+          status: 'rejected',
+          pdf_url: null,
+          rejection_reason: aiModerationMessage
+        })
+        .eq('id', target.id);
+
+      if (error) {
+        showToast('Reject action failed: ' + error.message, 'error');
+        return;
+      }
+
+      await sendKpritHubEmail({
+        to_email: target.uploader_email,
+        to_name: target.uploader_name || 'KPRIT Contributor',
+        subject_line: `KPRIT Hub AI Moderation Notice: ${target.title}`,
+        message_body: aiModerationMessage,
+        doc_title: target.title,
+        uploader_email: target.uploader_email,
+        compression_summary: 'Rejected by KPRIT Hub AI Moderation'
+      });
+
+      showToast(`Rejected "${target.title}" & dispatched KPRIT Hub AI notice!`, 'info');
+      await syncFromSupabase(false);
+    }
+
+    // Super-Admin Role Management
+    async function handleGrantRole(e) {
+      e.preventDefault();
+      const session = getSession();
+      if (!isSuperAdmin(session)) {
+        showToast('Only Super Admin can manage roles.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btn-grant-role');
+      btn.disabled = true;
+
+      try {
+        const email = document.getElementById('role-email').value.trim().toLowerCase();
+        const name = document.getElementById('role-name').value.trim();
+        const role = document.getElementById('role-type').value;
+        const assigned_branch = document.getElementById('role-branch').value;
+        const assigned_subject = document.getElementById('role-subject').value.trim() || 'ALL';
+
+        if (email === SUPER_ADMIN_EMAIL) {
+          showToast('Super Admin account is permanently locked as owner.', 'info');
+          return;
+        }
+
+        const { error } = await sb.from('user_roles').upsert({
+          email,
+          name,
+          role,
+          assigned_branch,
+          assigned_subject,
+          is_active: true
+        }, { onConflict: 'email' });
+
+        if (error) throw error;
+
+        e.target.reset();
+        document.getElementById('role-subject').value = 'ALL';
+        showToast(`Granted ${role.toUpperCase()} access to ${name} (${email})!`);
+        await syncFromSupabase(false);
+      } catch (err) {
+        showToast('Role update failed: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function toggleRoleStatus(email, nextState) {
+      if (!isSuperAdmin(getSession())) return;
+      if (email.toLowerCase() === SUPER_ADMIN_EMAIL) return;
+
+      const { error } = await sb
+        .from('user_roles')
+        .update({ is_active: nextState })
+        .eq('email', email.toLowerCase());
+
+      if (error) {
+        showToast('Status update failed: ' + error.message, 'error');
+        return;
+      }
+      showToast(nextState ? `Restored access for ${email}` : `Revoked access for ${email}`, nextState ? 'success' : 'info');
+      await syncFromSupabase(false);
+    }
+
+    async function deleteRoleRecord(email) {
+      if (!isSuperAdmin(getSession())) return;
+      if (email.toLowerCase() === SUPER_ADMIN_EMAIL) return;
+
+      const { error } = await sb
+        .from('user_roles')
+        .delete()
+        .eq('email', email.toLowerCase());
+
+      if (error) {
+        showToast('Delete failed: ' + error.message, 'error');
+        return;
+      }
+      showToast(`Removed ${email} from role list`, 'info');
+      await syncFromSupabase(false);
+    }
+
+    function renderAdminRolesManager() {
+      if (!isSuperAdmin(getSession())) return;
+      const activeCount = cloudRoles.filter(r => r.is_active).length;
+      document.getElementById('admin-total-roles-badge').textContent = `${activeCount} Active`;
+
+      const container = document.getElementById('admin-roles-list');
+      container.innerHTML = cloudRoles.map(r => {
+        const isOwner = r.email.toLowerCase() === SUPER_ADMIN_EMAIL;
+        const roleLabel = r.role === 'super_admin' ? 'SUPER ADMIN' : (r.role === 'faculty' ? 'FACULTY' : 'CR');
+        const badgeColor = r.role === 'super_admin'
+          ? 'bg-amber-100 text-amber-800'
+          : (r.role === 'faculty' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700');
+
+        return `
+          <div class="p-4 rounded-2xl border ${r.is_active ? 'border-slate-200 bg-slate-50/70' : 'border-rose-200 bg-rose-50/40 opacity-75'} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${badgeColor}">${roleLabel}</span>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">Branch: ${escapeHTML(r.assigned_branch)}</span>
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">Subject: ${escapeHTML(r.assigned_subject)}</span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${r.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${r.is_active ? 'Active' : 'Revoked'}</span>
+              </div>
+              <h4 class="font-bold text-sm text-slate-900 truncate">${escapeHTML(r.name)}</h4>
+              <p class="text-xs font-mono text-slate-500 truncate">${escapeHTML(r.email)}</p>
+            </div>
+
+            ${isOwner ? `
+              <span class="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl shrink-0">Permanent Owner</span>
+            ` : `
+              <div class="flex items-center gap-2 shrink-0">
+                <button onclick="toggleRoleStatus('${escapeHTML(r.email)}', ${!r.is_active})" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${r.is_active ? 'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'} transition-colors cursor-pointer">
+                  ${r.is_active ? 'Revoke Access' : 'Restore Access'}
+                </button>
+                <button onclick="deleteRoleRecord('${escapeHTML(r.email)}')" title="Remove Role" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            `}
+          </div>
+        `;
+      }).join('') || '<p class="text-xs text-slate-400">No CR or Faculty roles added yet.</p>';
+
       lucide.createIcons();
     }
 
     async function handlePostUpdate(e) {
       e.preventDefault();
       const session = getSession();
-      if (!session || session.role !== 'admin') {
-        showToast('Unauthorized: Only Admin can post updates.', 'error');
+      if (!isContributorOrAdmin(session)) {
+        showToast('Unauthorized: Only Admin, Faculty, or CRs can post updates.', 'error');
         return;
       }
 
@@ -1730,8 +2881,10 @@
     }
 
     async function deleteUpdate(id) {
-      const session = getSession();
-      if (!session || session.role !== 'admin') return;
+      if (!isSuperAdmin(getSession())) {
+        showToast('Only Super Admin can delete updates.', 'error');
+        return;
+      }
       const { error } = await sb.from('updates').delete().eq('id', id);
       if (error) {
         showToast('Delete failed: ' + error.message, 'error');
@@ -1744,6 +2897,7 @@
     function renderAdminUpdatesManager() {
       document.getElementById('admin-total-updates-badge').textContent = `${cloudUpdates.length} Active`;
       const container = document.getElementById('admin-updates-list');
+      const superAdmin = isSuperAdmin(getSession());
 
       container.innerHTML = cloudUpdates.map(u => `
         <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-start justify-between gap-3">
@@ -1756,22 +2910,27 @@
             <h4 class="font-bold text-sm text-slate-900">${escapeHTML(u.title)}</h4>
             <p class="text-xs text-slate-500 mt-0.5">${escapeHTML(u.target)}</p>
           </div>
-          <button onclick="deleteUpdate('${u.id}')" title="Delete Update" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          ${superAdmin ? `
+            <button onclick="deleteUpdate('${u.id}')" title="Delete Update" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          ` : ''}
         </div>
       `).join('') || '<p class="text-xs text-slate-400">No updates posted yet.</p>';
       lucide.createIcons();
     }
 
     function renderAdminDashboard() {
+      if (!isSuperAdmin(getSession())) return;
+
+      const approvedResources = cloudResources.filter(r => (r.status || 'approved') === 'approved');
       const totalStudents = cloudStudents.length;
       const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
       const activeToday = cloudStudents.filter(s => new Date(s.last_active).getTime() >= oneDayAgo).length;
-      const totalReads = cloudResources.reduce((sum, r) => sum + (r.views || 0), 0);
+      const totalReads = approvedResources.reduce((sum, r) => sum + (r.views || 0), 0);
 
       const subjectMap = {};
-      cloudResources.forEach(r => {
+      approvedResources.forEach(r => {
         subjectMap[r.subject] = (subjectMap[r.subject] || 0) + (r.views || 0);
       });
 
@@ -1854,6 +3013,7 @@
     }
 
     function exportAnalyticsCSV() {
+      if (!isSuperAdmin(getSession())) return;
       const headers = ['Student Name', 'Email', 'Last Active', 'Total Docs Read', 'Last Viewed Document'];
       const rows = cloudStudents.map(s => [
         `"${(s.full_name || '').replace(/"/g, '""')}"`,
@@ -1877,19 +3037,20 @@
     }
 
     // -----------------------------------------------------------------------
-    // 11. ADMIN CLOUD RESOURCE UPLOAD & DELETE (With Storage Cleanup)
+    // 14. AUTO-COMPRESSED UPLOAD + APPROVAL QUEUE WORKFLOW
     // -----------------------------------------------------------------------
     async function handleAdminUpload(e) {
       e.preventDefault();
       const session = getSession();
-      if (!session || session.role !== 'admin') {
-        showToast('Unauthorized: Only Admin can publish documents.', 'error');
+      if (!isContributorOrAdmin(session)) {
+        showToast('Unauthorized: Upload permission required.', 'error');
         return;
       }
 
       const btn = document.getElementById('btn-publish-resource');
+      const statusText = document.getElementById('compression-live-status');
       btn.disabled = true;
-      btn.querySelector('span').textContent = 'Uploading to Cloud...';
+      btn.querySelector('span').textContent = 'Optimizing & Uploading...';
 
       try {
         const title = document.getElementById('up-title').value.trim();
@@ -1899,20 +3060,49 @@
         const type = document.getElementById('up-type').value;
         const subject = document.getElementById('up-subject').value.trim();
         const rawText = document.getElementById('up-content').value.trim();
+        const cdnUrlInput = document.getElementById('up-cdn-url').value.trim();
         const fileInput = document.getElementById('up-pdf-file');
 
+        if (!isSuperAdmin(session)) {
+          if (session.assigned_branch && session.assigned_branch !== 'ALL' && session.assigned_branch.toLowerCase() !== dept.toLowerCase()) {
+            throw new Error(`Your role is scoped to ${session.assigned_branch} branch only.`);
+          }
+          if (session.assigned_subject && session.assigned_subject !== 'ALL' && session.assigned_subject.toLowerCase() !== subject.toLowerCase()) {
+            throw new Error(`Your role is scoped to subject "${session.assigned_subject}" only.`);
+          }
+        }
+
         let pdfPath = null;
-        if (fileInput.files && fileInput.files[0]) {
-          const file = fileInput.files[0];
-          const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-          const { error: uploadErr } = await sb.storage.from('pdfs').upload(cleanName, file, {
+        let originalSizeBytes = 0;
+        let compressedSizeBytes = 0;
+
+        if (cdnUrlInput && /^https?:\/\//i.test(cdnUrlInput)) {
+          pdfPath = cdnUrlInput;
+        } else if (fileInput.files && fileInput.files[0]) {
+          const rawFile = fileInput.files[0];
+          const compResult = await compressPdfInBrowser(rawFile, (progressLabel) => {
+            btn.querySelector('span').textContent = progressLabel;
+            if (statusText) statusText.textContent = progressLabel;
+          });
+
+          originalSizeBytes = compResult.originalSize;
+          compressedSizeBytes = compResult.compressedSize;
+          const savedPct = calcSavedPercent(originalSizeBytes, compressedSizeBytes);
+          if (statusText) {
+            statusText.textContent = `Compressed: ${formatBytes(originalSizeBytes)} → ${formatBytes(compressedSizeBytes)} (${savedPct}% saved)`;
+          }
+
+          btn.querySelector('span').textContent = 'Uploading to Supabase Cloud...';
+          const cleanName = `${Date.now()}_${rawFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+          const { error: uploadErr } = await sb.storage.from('pdfs').upload(cleanName, compResult.fileToUpload, {
             cacheControl: '3600',
             upsert: false
           });
           if (uploadErr) throw uploadErr;
-
           pdfPath = cleanName;
         }
+
+        const initialStatus = isSuperAdmin(session) ? 'approved' : 'pending';
 
         const { error: insertErr } = await sb.from('resources').insert([{
           title,
@@ -1923,30 +3113,55 @@
           type,
           views: 1,
           pdf_url: pdfPath,
-          raw_text: rawText || (pdfPath ? null : `Curated study material for ${subject} (${year} ${dept} ${sem}).`)
+          raw_text: rawText || (pdfPath ? null : `Curated study material for ${subject} (${year} ${dept} ${sem}).`),
+          original_size_bytes: originalSizeBytes,
+          compressed_size_bytes: compressedSizeBytes,
+          uploader_email: session.email,
+          uploader_name: session.name,
+          status: initialStatus,
+          rejection_reason: null
         }]);
         if (insertErr) throw insertErr;
 
+        if (initialStatus === 'pending') {
+          const savedPct = calcSavedPercent(originalSizeBytes, compressedSizeBytes);
+          const compSummary = `${formatBytes(originalSizeBytes)} -> ${formatBytes(compressedSizeBytes)} (${savedPct}% saved)`;
+          await sendKpritHubEmail({
+            to_email: SUPER_ADMIN_EMAIL,
+            to_name: 'Karthik Mandugula (Super Admin)',
+            subject_line: `[Pending Approval] ${title} (${dept} • ${subject})`,
+            message_body: `New PDF submitted by ${session.name} (${session.email}) for ${year} ${dept} (${sem} - ${subject}). Compression telemetry: ${compSummary}. Open KPRIT Resource Hub -> Pending Approvals to preview and approve/reject.`,
+            doc_title: title,
+            uploader_email: session.email,
+            compression_summary: compSummary
+          });
+          showToast(`Submitted "${title}" to Super-Admin Approval Queue!`, 'info');
+        } else {
+          showToast(`Published "${title}" live to ${year} ${dept}!`);
+        }
+
         e.target.reset();
-        showToast(`Published "${title}" to ${year} ${dept}!`);
+        document.getElementById('up-auto-compress').checked = true;
+        updateRoleUIHeader();
         await syncFromSupabase(false);
       } catch (err) {
         showToast('Upload failed: ' + err.message, 'error');
       } finally {
         btn.disabled = false;
-        btn.querySelector('span').textContent = 'Publish to Student Portal';
+        updateRoleUIHeader();
       }
     }
 
     async function deleteResource(id) {
-      const session = getSession();
-      if (!session || session.role !== 'admin') return;
+      if (!isSuperAdmin(getSession())) {
+        showToast('Only Super Admin can delete resources.', 'error');
+        return;
+      }
 
-      // Clean up the PDF file from Supabase Storage before deleting the database row
       const target = cloudResources.find(r => String(r.id) === String(id));
-      if (target && target.pdf_url) {
+      if (target && target.pdf_url && !isExternalCdnUrl(target.pdf_url)) {
         const storagePath = extractStoragePath(target.pdf_url);
-        if (storagePath && !storagePath.startsWith('http')) {
+        if (storagePath && !/^https?:\/\//i.test(storagePath)) {
           await sb.storage.from('pdfs').remove([storagePath]);
         }
       }
@@ -1961,36 +3176,84 @@
     }
 
     function renderAdminResourceManager() {
-      document.getElementById('admin-total-docs-badge').textContent = `${cloudResources.length} Files`;
+      const session = getSession();
+      const superAdmin = isSuperAdmin(session);
+
+      const visibleList = superAdmin
+        ? cloudResources
+        : cloudResources.filter(r =>
+            (r.uploader_email && r.uploader_email.toLowerCase() === session.email) ||
+            (r.status || 'approved') === 'approved'
+          );
+
+      document.getElementById('admin-total-docs-badge').textContent = `${visibleList.length} Files`;
 
       const container = document.getElementById('admin-resources-list');
-      container.innerHTML = cloudResources.map(item => `
-        <div class="p-4 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-1.5 mb-1">
-              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">${escapeHTML(item.year)} • ${escapeHTML(item.dept)} • ${escapeHTML(item.sem)}</span>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">${escapeHTML(item.type)}</span>
-              ${item.pdf_url ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">Protected PDF</span>' : ''}
-            </div>
-            <h4 class="font-bold text-sm text-slate-900 truncate">${escapeHTML(item.title)}</h4>
-            <p class="text-xs text-slate-500">${escapeHTML(item.subject)} • <span class="font-semibold text-slate-700">${item.views || 0} reads</span></p>
-          </div>
+      container.innerHTML = visibleList.map(item => {
+        const st = item.status || 'approved';
+        const isCdn = isExternalCdnUrl(item.pdf_url);
+        const storageBadge = item.pdf_url
+          ? (isCdn
+            ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700">Zero-Egress CDN</span>'
+            : '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">Protected PDF</span>')
+          : '';
 
-          <div class="flex items-center gap-2 shrink-0">
-            <button onclick="openProtectedReader('${item.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 transition-colors cursor-pointer">
-              Preview
-            </button>
-            <button onclick="deleteResource('${item.id}')" title="Delete Document" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
+        const statusBadge = st === 'approved'
+          ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">Approved & Live</span>'
+          : (st === 'pending'
+            ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">Pending Super-Admin Approval</span>'
+            : '<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800">Rejected by KPRIT Hub AI</span>');
+
+        const savedPct = calcSavedPercent(item.original_size_bytes, item.compressed_size_bytes);
+        const telemetryLine = item.original_size_bytes > 0
+          ? `<span class="text-[11px] font-mono text-slate-500"> • ${formatBytes(item.original_size_bytes)} → ${formatBytes(item.compressed_size_bytes)}${savedPct > 0 ? ` (${savedPct}% saved)` : ''}</span>`
+          : '';
+
+        const rejectionBanner = (st === 'rejected' && item.rejection_reason)
+          ? `<div class="mt-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-start gap-2">
+               <i data-lucide="bot" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+               <span><strong>KPRIT Hub AI:</strong> ${escapeHTML(item.rejection_reason)}</span>
+             </div>`
+          : '';
+
+        return `
+          <div class="p-4 rounded-2xl border ${st === 'rejected' ? 'border-rose-200 bg-rose-50/20' : (st === 'pending' ? 'border-amber-200 bg-amber-50/30' : 'border-slate-200 bg-slate-50/50')} flex flex-col justify-between gap-2">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-1.5 mb-1">
+                  ${statusBadge}
+                  <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">${escapeHTML(item.year)} • ${escapeHTML(item.dept)} • ${escapeHTML(item.sem)}</span>
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">${escapeHTML(item.type)}</span>
+                  ${storageBadge}
+                </div>
+                <h4 class="font-bold text-sm text-slate-900 truncate">${escapeHTML(item.title)}</h4>
+                <p class="text-xs text-slate-500">
+                  ${escapeHTML(item.subject)} • <span class="font-semibold text-slate-700">${item.views || 0} reads</span>
+                  ${telemetryLine}
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                ${st !== 'rejected' ? `
+                  <button onclick="openProtectedReader('${item.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 transition-colors cursor-pointer">
+                    Preview
+                  </button>
+                ` : ''}
+                ${superAdmin ? `
+                  <button onclick="deleteResource('${item.id}')" title="Delete Document" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+            ${rejectionBanner}
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
 
       lucide.createIcons();
     }
 
-    // Initialize icons on initial paint; session routing is driven by onAuthStateChange
     lucide.createIcons();
   </script>
 </body>
