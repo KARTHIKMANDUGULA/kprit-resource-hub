@@ -1,0 +1,80 @@
+/* ============================================================================
+ * KPRIT RESOURCE HUB — PRODUCTION STYLESHEET (styles.css)
+ * Complements Tailwind CSS utility classes with responsive PDF viewport
+ * styling, clean scrollbars, and seamless boot-loader transitions.
+ * ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+ * 1. BOOT LOADER OVERLAY (Eliminates Login Screen Flash / FOUC)
+ * ---------------------------------------------------------------------------- */
+#boot-loader {
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+#boot-loader.boot-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------------------------
+ * 2. SCROLLBAR UTILITIES (Clean Horizontal Pills on Mobile)
+ * ---------------------------------------------------------------------------- */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ----------------------------------------------------------------------------
+ * 3. RESPONSIVE PDF VIEWPORT & ORDERED PAGE SLOTS
+ * Native pinch-to-zoom friendly, responsive container with smooth horizontal
+ * and vertical scrolling without blank vertical gaps or clipped canvases.
+ * ---------------------------------------------------------------------------- */
+#pdf-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.5rem;
+}
+
+#pdf-canvas-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  min-width: 100%;
+  width: max-content;
+  margin: 0 auto;
+}
+
+.pdf-page-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.pdf-page-slot canvas {
+  display: block;
+  background: #ffffff;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ----------------------------------------------------------------------------
+ * 4. MOBILE SCROLL-CHAINING PROTECTION
+ * ---------------------------------------------------------------------------- */
+#reader-viewport {
+  overscroll-behavior: contain;
+}
