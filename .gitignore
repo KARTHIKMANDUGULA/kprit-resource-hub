@@ -1,0 +1,16 @@
+# OS & Editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Environment & local secrets
+.env
+.env.local
+
+# Local backups & exported CSVs
+*backup*
+*.csv
+*.bak
+
+# Keep raw study PDFs out of Git (they live in Supabase Storage)
+*.pdf
